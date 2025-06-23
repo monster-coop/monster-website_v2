@@ -1,0 +1,115 @@
+{
+  "permissions": {
+    "read_file": true,
+    "write_file": true,
+    "list_directory": true,
+    "run_terminal": true,
+    "search_files": true,
+    "edit_file": true,
+    "create_directory": true,
+    "delete_file": true,
+    "move_file": true,
+    "allowed_commands": [
+      "npm",
+      "npx",
+      "yarn",
+      "pnpm",
+      "git",
+      "node",
+      "tsx",
+      "next",
+      "supabase",
+      "vercel",
+      "playwright",
+      "jest",
+      "eslint",
+      "prettier",
+      "tailwindcss"
+    ],
+    "blocked_commands": [
+      "rm -rf /",
+      "sudo",
+      "chmod 777",
+      "> /dev/null"
+    ]
+  },
+  "project_settings": {
+    "default_branch": "main",
+    "auto_commit": false,
+    "auto_format": true,
+    "typescript_strict": true,
+    "lint_on_save": true,
+    "architecture": "supabase_frontend_only"
+  },
+  "development": {
+    "hot_reload": true,
+    "source_maps": true,
+    "debug_mode": false
+  },
+  "supabase": {
+    "use_mcp": true,
+    "auto_generate_types": true,
+    "enable_rls": true,
+    "db_schema_path": "specs/db-schema.md",
+    "client_type": "browser_and_server"
+  },
+  "mcp_tools": {
+    "supabase": {
+      "enabled": true,
+      "auto_execute": ["generate-typescript-types", "get-advisors"],
+      "priority": "high"
+    },
+    "tosspayments": {
+      "enabled": true,
+      "guide_version": "v2",
+      "auto_integration": true,
+      "keywords": ["결제위젯", "연동", "카드", "결제"]
+    },
+    "github": {
+      "enabled": true,
+      "auto_commit": false,
+      "pr_auto_create": false
+    },
+    "desktop_commander": {
+      "enabled": true,
+      "file_management": true,
+      "command_execution": true
+    }
+  },
+  "infinite_loop": {
+    "max_iterations": 20,
+    "batch_size": 5,
+    "concurrent_agents": 4,
+    "safety_checks": true,
+    "auto_review": true,
+    "supabase_integration": true,
+    "debug_agent_enabled": true,
+    "agents": {
+      "frontend": "UI/UX 전문",
+      "supabase": "데이터베이스 전문",
+      "integration": "연동 전문",
+      "quality": "품질 보증",
+      "debug": "디버깅 전문"
+    }
+  },
+  "memory_settings": {
+    "context_window": 100000,
+    "max_file_size": "10MB",
+    "cache_duration": "1h"
+  },
+  "lib_structure": {
+    "database": "lib/database",
+    "auth": "lib/auth", 
+    "payments": "lib/payments",
+    "subscriptions": "lib/subscriptions",
+    "realtime": "lib/realtime",
+    "utils": "lib/utils",
+    "types": "lib/types"
+  },
+  "db_schema_reminder": {
+    "enabled": true,
+    "path": "specs/db-schema.md",
+    "mandatory_reference": true,
+    "message": "⚠️ 개발 시 반드시 DB 스키마(specs/db-schema.md)를 참고하세요!"
+  }
+} 

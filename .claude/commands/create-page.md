@@ -2,6 +2,19 @@
 
 몬스터 협동조합 브랜드 가이드라인을 준수하여 완전한 Next.js 페이지를 생성합니다.
 
+## Project Context
+
+현재 프로젝트 구조를 확인합니다:
+```bash
+!find app -type f -name "*.tsx" -o -name "*.ts" | head -20
+```
+
+기존 컴포넌트 구조를 참조합니다:
+```
+@app/layout.tsx
+@app/page.tsx
+```
+
 ## Usage
 
 ```
@@ -246,8 +259,25 @@ export const metadata: Metadata = {
 
 페이지 생성을 시작합니다!
 
-Page Name: $ARGUMENTS
-Page Type: marketing (기본값)
-Features: 없음 (기본값)
+## Argument Processing
 
-완전한 페이지 구조를 생성하고 모든 관련 파일을 생성하겠습니다. 
+주어진 인수를 파싱합니다: `$ARGUMENTS`
+
+```
+Arguments: $ARGUMENTS
+```
+
+### Argument Parsing Logic
+
+인수를 다음과 같이 처리합니다:
+- 첫 번째 인수: `page_name` (필수)
+- 두 번째 인수: `page_type` (선택적, 기본값: marketing)  
+- 세 번째 인수: `features` (선택적, 쉼표로 구분된 목록)
+
+### 예시 파싱:
+- `landing` → page_name: "landing", page_type: "marketing", features: []
+- `landing marketing` → page_name: "landing", page_type: "marketing", features: []
+- `program-detail detail payment` → page_name: "program-detail", page_type: "detail", features: ["payment"]
+- `admin-panel dashboard auth,admin` → page_name: "admin-panel", page_type: "dashboard", features: ["auth", "admin"]
+
+이제 파싱된 인수를 바탕으로 완전한 페이지 구조를 생성하겠습니다. 

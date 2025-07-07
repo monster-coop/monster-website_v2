@@ -1,6 +1,33 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
+// Public routes that don't require authentication
+const publicRoutes = [
+  '/',
+  '/auth/login',
+  '/auth/signup', 
+  '/auth/callback',
+  '/auth/reset-password',
+  '/auth/forgot-password',
+  '/programs',
+  '/about',
+  '/contact'
+]
+
+// Routes that require authentication
+const protectedRoutes = [
+  '/dashboard',
+  '/profile',
+  '/settings',
+  '/my-programs',
+  '/payments'
+]
+
+// Admin-only routes
+const adminRoutes = [
+  '/admin'
+]
+
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
     request,
@@ -35,15 +62,65 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  if (
-    !user &&
-    !request.nextUrl.pathname.startsWith('/login') &&
-    !request.nextUrl.pathname.startsWith('/auth')
-  ) {
-    // no user, potentially respond by redirecting the user to the login page
-    const url = request.nextUrl.clone()
-    url.pathname = '/login'
-    return NextResponse.redirect(url)
+  const { pathname } = request.nextUrl
+
+  // Check if the route is public
+  const isPublicRoute = publicRoutes.some(route => 
+    pathname === route || pathname.startsWith(`${route}/`)
+  )
+
+  // Check if the route requires authentication
+  const isProtectedRoute = protectedRoutes.some(route =>
+    pathname === route || pathname.startsWith(`${route}/`)
+  )
+
+  // Check if the route requires admin access
+  const isAdminRoute = adminRoutes.some(route =>
+    pathname === route || pathname.startsWith(`${route}/`)
+  )
+
+  // Handle authentication redirects
+  if (!user) {
+    // User is not authenticated
+    if (isProtectedRoute || isAdminRoute) {
+      // Redirect to login for protected routes
+      const url = request.nextUrl.clone()
+      url.pathname = '/auth/login'
+      url.searchParams.set('redirectTo', pathname)
+      return NextResponse.redirect(url)
+    }
+  } else {
+    // User is authenticated
+    if (isAdminRoute) {
+      // Check admin permissions for admin routes
+      try {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('is_admin')
+          .eq('id', user.id)
+          .single()
+
+        if (!profile?.is_admin) {
+          // User is not admin, redirect to home
+          const url = request.nextUrl.clone()
+          url.pathname = '/'
+          return NextResponse.redirect(url)
+        }
+      } catch (error) {
+        console.error('Error checking admin status:', error)
+        // On error, redirect to home for safety
+        const url = request.nextUrl.clone()
+        url.pathname = '/'
+        return NextResponse.redirect(url)
+      }
+    }
+
+    // Redirect authenticated users away from auth pages
+    if (pathname.startsWith('/auth/') && !pathname.startsWith('/auth/callback')) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/dashboard'
+      return NextResponse.redirect(url)
+    }
   }
 
   // IMPORTANT: You *must* return the supabaseResponse object as it is. If you're

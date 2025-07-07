@@ -24,7 +24,8 @@
       "jest",
       "eslint",
       "prettier",
-      "tailwindcss"
+      "tailwindcss",
+      "bun"
     ],
     "blocked_commands": [
       "rm -rf /",
@@ -52,6 +53,37 @@
     "enable_rls": true,
     "db_schema_path": "specs/db-schema.md",
     "client_type": "browser_and_server"
+  },
+  "mcp": {
+    "servers": {
+      "supabase": {
+        "command": "npx",
+        "args": [
+          "-y",
+          "@supabase/mcp-server-supabase@latest",
+          "--access-token",
+          "${SUPABASE_ACCESS_TOKEN}"
+        ]
+      },
+      "github": {
+        "command": "docker",
+        "args": [
+          "run",
+          "-i",
+          "--rm",
+          "-e",
+          "GITHUB_PERSONAL_ACCESS_TOKEN",
+          "ghcr.io/github/github-mcp-server"
+        ]
+      },
+      "tosspayments-integration-guide": {
+        "command": "npx",
+        "args": [
+          "-y",
+          "@tosspayments/integration-guide-mcp@latest"
+        ]
+      }
+    }
   },
   "mcp_tools": {
     "supabase": {

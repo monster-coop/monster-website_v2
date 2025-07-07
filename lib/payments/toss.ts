@@ -1,5 +1,7 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/client'
 import { Database } from '@/types/database'
+import { TossPaymentRequest, TossPaymentResponse, Coupon } from '@/lib/types/reservations'
+import { sendPaymentConfirmation } from '@/lib/database/notifications'
 
 // Types
 type Payment = Database['public']['Tables']['payments']['Row']
@@ -20,7 +22,7 @@ export async function initiateTossPayment(paymentData: {
   programId?: string
   subscriptionId?: string
 }) {
-  const supabase = await createClient()
+  const supabase = createClient()
 
   try {
     // 1. Supabase에 결제 정보 저장 (DB Schema 준수)
@@ -68,7 +70,7 @@ export async function confirmTossPayment(
   orderId: string,
   amount: number
 ) {
-  const supabase = await createClient()
+  const supabase = createClient()
 
   try {
     // 1. TossPayments API 결제 승인 요청
@@ -144,7 +146,7 @@ export async function confirmTossPayment(
  * - user_subscriptions 테이블 (구독 활성화)
  */
 async function handlePaymentSuccess(payment: Payment) {
-  const supabase = await createClient()
+  const supabase = createClient()
 
   try {
     // 프로그램 결제인 경우
@@ -172,18 +174,52 @@ async function handlePaymentSuccess(payment: Payment) {
         .eq('id', payment.subscription_id)
     }
 
-    // 알림 생성
-    await supabase
-      .from('notifications')
-      .insert([{
-        user_id: payment.user_id,
-        title: '결제 완료',
-        message: '결제가 성공적으로 완료되었습니다.',
-        type: 'payment',
-        created_at: new Date().toISOString()
-      }])
+    // 결제 완료 알림 발송
+    try {
+      await sendPaymentConfirmation(payment.id)
+    } catch (error) {
+      console.error('결제 완료 알림 발송 실패:', error)
+      // Don't fail the payment if notification fails
+    }
 
   } catch (error) {
     console.error('결제 완료 처리 에러:', error)
   }
+}
+
+/**
+ * 주문 ID 생성
+ * @param userId - 사용자 ID
+ * @param programId - 프로그램 ID
+ * @returns 주문 ID
+ */
+export function generateOrderId(userId: string, programId: string): string {
+  const timestamp = Date.now()
+  const shortUserId = userId.slice(-8)
+  const shortProgramId = programId.slice(-8)
+  return `ORDER-${shortUserId}-${shortProgramId}-${timestamp}`
+}
+
+/**
+ * 결제 금액 계산 (할인 적용)
+ * @param basePrice - 기본 가격
+ * @param earlyBirdPrice - 얼리버드 가격
+ * @param earlyBirdDeadline - 얼리버드 마감일
+ * @returns 계산된 금액
+ */
+export function calculatePaymentAmount(
+  basePrice: number,
+  earlyBirdPrice?: number,
+  earlyBirdDeadline?: string
+): number {
+  if (earlyBirdPrice && earlyBirdDeadline) {
+    const now = new Date()
+    const deadline = new Date(earlyBirdDeadline)
+    
+    if (now <= deadline) {
+      return earlyBirdPrice
+    }
+  }
+  
+  return basePrice
 } 

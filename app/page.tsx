@@ -2,16 +2,16 @@
 
 import { motion } from "framer-motion";
 import {
-  Menu,
-  X,
   ArrowRight,
   Users,
   Award,
   Calendar,
   CheckCircle,
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { getLatestProgramsByCategory } from "@/lib/database/programs";
+import Header from "@/components/Header";
+import Link from "next/link";
 
 const fadeInUp = {
   initial: { opacity: 0, y: 60 },
@@ -28,8 +28,7 @@ const staggerContainer = {
 };
 
 export default function LandingPage() {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [latestPrograms, setLatestPrograms] = useState<any>({});
+  const [latestPrograms, setLatestPrograms] = useState<Record<string, Array<{title: string; id: string}>>>({});
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -55,110 +54,7 @@ export default function LandingPage() {
       <div className="absolute bottom-0 right-0 w-96 h-96 bg-gradient-to-tl from-purple-600/20 to-transparent rounded-full blur-3xl"></div>
       <div className="absolute top-1/4 left-1/4 w-72 h-72 bg-gradient-to-br from-blue-500/15 to-transparent rounded-full blur-2xl"></div>
       <div className="relative z-10">
-        {/* Header */}
-        <header className="fixed top-0 w-full bg-white/5 backdrop-blur-xl z-50 border-b border-white/10">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-center h-16">
-              <div className="flex items-center">
-                <div className="text-2xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
-                  몬스터 협동조합
-                </div>
-              </div>
-
-              {/* Desktop Menu */}
-              <nav className="hidden md:flex space-x-8">
-                <a
-                  href="#about"
-                  className="text-gray-200 hover:text-purple-400 transition-colors"
-                >
-                  소개
-                </a>
-                <a
-                  href="#programs"
-                  className="text-gray-200 hover:text-purple-400 transition-colors"
-                >
-                  프로그램
-                </a>
-                <a
-                  href="#subscription"
-                  className="text-gray-200 hover:text-purple-400 transition-colors"
-                >
-                  구독서비스
-                </a>
-                <a
-                  href="#contact"
-                  className="text-gray-200 hover:text-purple-400 transition-colors"
-                >
-                  문의하기
-                </a>
-              </nav>
-
-              <div className="hidden md:flex">
-                <a
-                  href="#programs"
-                  className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-2 rounded-full hover:from-purple-700 hover:to-pink-700 transition-all duration-300 shadow-lg hover:shadow-purple-500/25 cursor-pointer"
-                >
-                  프로그램 신청하기
-                </a>
-              </div>
-
-              {/* Mobile Menu Button */}
-              <button
-                onClick={() => setIsMenuOpen(!isMenuOpen)}
-                className="md:hidden p-2"
-              >
-                {isMenuOpen ? (
-                  <X size={24} className="text-gray-200" />
-                ) : (
-                  <Menu size={24} className="text-gray-200" />
-                )}
-              </button>
-            </div>
-          </div>
-
-          {/* Mobile Menu */}
-          {isMenuOpen && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              className="md:hidden bg-black/20 backdrop-blur-xl border-t border-white/10"
-            >
-              <div className="px-4 py-2 space-y-2">
-                <a
-                  href="#about"
-                  className="block py-2 text-gray-200 hover:text-purple-400"
-                >
-                  소개
-                </a>
-                <a
-                  href="#programs"
-                  className="block py-2 text-gray-200 hover:text-purple-400"
-                >
-                  프로그램
-                </a>
-                <a
-                  href="#subscription"
-                  className="block py-2 text-gray-200 hover:text-purple-400"
-                >
-                  구독서비스
-                </a>
-                <a
-                  href="#contact"
-                  className="block py-2 text-gray-200 hover:text-purple-400"
-                >
-                  문의하기
-                </a>
-                <a
-                  href="#programs"
-                  className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-2 rounded-full hover:from-purple-700 hover:to-pink-700 transition-all duration-300 shadow-lg hover:shadow-purple-500/25 mt-2 block text-center"
-                >
-                  프로그램 신청하기
-                </a>
-              </div>
-            </motion.div>
-          )}
-        </header>
+        <Header />
 
         {/* Hero Section */}
         <section className="min-h-[100dvh] flex items-center justify-center relative">
@@ -197,12 +93,12 @@ export default function LandingPage() {
                 >
                   지금 시작하기 <ArrowRight size={20} />
                 </a>
-                <a
+                <Link
                   href="/programs"
                   className="border border-purple-400 text-purple-400 px-8 py-3 rounded-full hover:bg-purple-400/10 transition-colors backdrop-blur-sm cursor-pointer"
                 >
                   프로그램 보기
-                </a>
+                </Link>
               </motion.div>
             </motion.div>
           </div>

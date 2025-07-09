@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -11,6 +12,7 @@ export default function Header() {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [profile, setProfile] = useState<{ full_name?: string } | null>(null);
+
 
   useEffect(() => {
     // Get initial session
@@ -67,6 +69,7 @@ export default function Header() {
     if (user?.email) return user.email.split("@")[0];
     return "사용자";
   };
+
 
   return (
     <header className="fixed top-0 w-full bg-white/5 backdrop-blur-xl z-50 border-b border-white/10">
@@ -215,9 +218,11 @@ export default function Header() {
       {isProfileOpen && (
         <div
           className="fixed inset-0 z-40"
+
           onClick={() => setIsProfileOpen(false)}
         />
       )}
     </header>
   );
 }
+

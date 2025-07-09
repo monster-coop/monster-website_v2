@@ -5,16 +5,13 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { 
   Calendar, 
-  Clock, 
   MapPin, 
-  Users, 
   BookOpen,
   CreditCard,
   Bell,
   Settings,
   User,
   PlusCircle,
-  Heart,
   Award,
   TrendingUp,
   LogOut,
@@ -24,6 +21,7 @@ import Link from "next/link";
 import { getCurrentUser, signOut } from "@/lib/auth";
 import { createClient } from '@/lib/supabase/client';
 import { Database } from "@/types/database";
+import ProfileEditModal from "@/components/profile/ProfileEditModal";
 
 type ProgramParticipant = Database['public']['Tables']['program_participants']['Row'] & {
   programs?: Database['public']['Tables']['programs']['Row'] & {
@@ -38,7 +36,7 @@ interface DashboardStats {
   completedPrograms: number;
   totalSpent: number;
   upcomingPrograms: ProgramParticipant[];
-  recentActivities: any[];
+  recentActivities: ProgramParticipant[];
 }
 
 const fadeInUp = {
@@ -57,8 +55,8 @@ const staggerContainer = {
 
 export default function DashboardPage() {
   const router = useRouter();
-  const [user, setUser] = useState<any>(null);
-  const [profile, setProfile] = useState<any>(null);
+  const [user, setUser] = useState<Database['public']['Tables']['profiles']['Row'] | null>(null);
+  const [profile, setProfile] = useState<Database['public']['Tables']['profiles']['Row'] | null>(null);
   const [stats, setStats] = useState<DashboardStats>({
     totalPrograms: 0,
     activePrograms: 0,
@@ -68,6 +66,7 @@ export default function DashboardPage() {
     recentActivities: []
   });
   const [loading, setLoading] = useState(true);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
   useEffect(() => {
     loadUserData();
@@ -153,6 +152,12 @@ export default function DashboardPage() {
     } catch (error) {
       console.error('Sign out failed:', error);
     }
+  };
+
+  const handleProfileUpdated = (updatedProfile: Database['public']['Tables']['profiles']['Row']) => {
+    setProfile(updatedProfile);
+    // 필요시 stats도 업데이트
+    loadUserData();
   };
 
   const formatPrice = (price: number) => {
@@ -314,7 +319,7 @@ export default function DashboardPage() {
                           <div className="space-y-1 text-sm text-gray-500">
                             <div className="flex items-center gap-2">
                               <Calendar size={14} />
-                              <span>{formatDate(participation.programs?.start_date!)}</span>
+                              <span>{participation.programs?.start_date ? formatDate(participation.programs.start_date) : '날짜 미정'}</span>
                             </div>
                             <div className="flex items-center gap-2">
                               <MapPin size={14} />
@@ -389,12 +394,13 @@ export default function DashboardPage() {
                   )}
                 </div>
                 
-                <Link
-                  href="/profile/edit"
-                  className="mt-4 w-full bg-gray-100 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-200 transition-colors text-center block"
+                <button
+                  onClick={() => setIsProfileModalOpen(true)}
+                  className="mt-4 w-full bg-gray-100 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-200 transition-colors text-center flex items-center justify-center gap-2"
                 >
+                  <Settings size={16} />
                   프로필 편집
-                </Link>
+                </button>
               </div>
 
               {/* Quick Actions */}
@@ -460,6 +466,14 @@ export default function DashboardPage() {
           </div>
         </motion.div>
       </div>
+
+      {/* Profile Edit Modal */}
+      <ProfileEditModal
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
+        currentProfile={profile}
+        onProfileUpdated={handleProfileUpdated}
+      />
     </div>
   );
 }

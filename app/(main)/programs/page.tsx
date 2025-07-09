@@ -6,6 +6,7 @@ import { Calendar, Clock, MapPin, Users, Star, ArrowRight, Search } from "lucide
 import Link from "next/link";
 import { getAllPrograms } from "@/lib/database/programs-client";
 import { Database } from "@/types/database";
+import Header from "@/components/Header";
 
 type Program = Database['public']['Tables']['programs']['Row'] & {
   program_categories?: {
@@ -132,23 +133,26 @@ export default function ProgramsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <section className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <Header />
+        
+      {/* Hero Section */}
+      <section className="bg-white shadow-sm pt-24 pb-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
             initial="initial"
             animate="animate"
             variants={staggerContainer}
+            className="text-center"
           >
             <motion.h1
               variants={fadeInUp}
-              className="text-3xl md:text-4xl font-bold text-gray-900 mb-4"
+              className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 bg-gradient-to-r from-[#56007C] to-purple-600 bg-clip-text text-transparent"
             >
               교육 프로그램
             </motion.h1>
             <motion.p
               variants={fadeInUp}
-              className="text-lg text-gray-600"
+              className="text-xl md:text-2xl text-gray-600 mb-8 max-w-3xl mx-auto"
             >
               팀프러너로 성장하는 다양한 교육 프로그램을 만나보세요
             </motion.p>
@@ -157,48 +161,55 @@ export default function ProgramsPage() {
       </section>
 
       {/* Filters */}
-      <section className="bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex flex-col lg:flex-row gap-4">
-            {/* Search */}
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-                <input
-                  type="text"
-                  placeholder="프로그램명, 키워드 검색..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#56007C] focus:border-transparent"
-                />
+      <section className="bg-white border-b pb-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className="bg-gray-50 rounded-2xl p-6 border border-gray-200 shadow-sm"
+          >
+            <div className="flex flex-col lg:flex-row gap-4">
+              {/* Search */}
+              <div className="flex-1">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                  <input
+                    type="text"
+                    placeholder="프로그램명, 키워드 검색..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-10 pr-4 py-3 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#56007C] focus:border-transparent placeholder-gray-400 text-gray-900"
+                  />
+                </div>
               </div>
+
+              {/* Category Filter */}
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="px-4 py-3 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#56007C] focus:border-transparent text-gray-900"
+              >
+                <option value="all">전체 카테고리</option>
+                <option value="team-entrepreneurship">팀기업가정신 교육</option>
+                <option value="squeeze-lrs">SQUEEZE LRS</option>
+                <option value="challenge-trip">챌린지 트립</option>
+                <option value="writer-trip">작가가 되는 트립</option>
+              </select>
+
+              {/* Difficulty Filter */}
+              <select
+                value={selectedDifficulty}
+                onChange={(e) => setSelectedDifficulty(e.target.value)}
+                className="px-4 py-3 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#56007C] focus:border-transparent text-gray-900"
+              >
+                <option value="all">전체 난이도</option>
+                <option value="beginner">초급</option>
+                <option value="intermediate">중급</option>
+                <option value="advanced">고급</option>
+              </select>
             </div>
-
-            {/* Category Filter */}
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#56007C] focus:border-transparent"
-            >
-              <option value="all">전체 카테고리</option>
-              <option value="team-entrepreneurship">팀기업가정신 교육</option>
-              <option value="squeeze-lrs">SQUEEZE LRS</option>
-              <option value="challenge-trip">챌린지 트립</option>
-              <option value="writer-trip">작가가 되는 트립</option>
-            </select>
-
-            {/* Difficulty Filter */}
-            <select
-              value={selectedDifficulty}
-              onChange={(e) => setSelectedDifficulty(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#56007C] focus:border-transparent"
-            >
-              <option value="all">전체 난이도</option>
-              <option value="beginner">초급</option>
-              <option value="intermediate">중급</option>
-              <option value="advanced">고급</option>
-            </select>
-          </div>
+          </motion.div>
         </div>
       </section>
 
@@ -220,10 +231,10 @@ export default function ProgramsPage() {
                 <motion.div
                   key={program.id}
                   variants={fadeInUp}
-                  className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 group"
+                  className="bg-white rounded-2xl border border-gray-200 overflow-hidden hover:shadow-xl transition-all duration-300 group shadow-lg"
                 >
                   {/* Program Image */}
-                  <div className="relative h-48 bg-gradient-to-br from-[#56007C]/20 to-[#56007C]/40">
+                  <div className="relative h-48 bg-gradient-to-br from-[#56007C]/20 to-purple-600/30">
                     {program.is_featured && (
                       <div className="absolute top-4 left-4 bg-[#56007C] text-white px-2 py-1 rounded-full text-sm font-semibold flex items-center gap-1">
                         <Star size={14} />
@@ -256,19 +267,19 @@ export default function ProgramsPage() {
                     {/* Program Details */}
                     <div className="space-y-2 text-sm text-gray-500 mb-4">
                       <div className="flex items-center gap-2">
-                        <Calendar size={16} />
+                        <Calendar size={16} className="text-[#56007C]" />
                         <span>{formatDate(program.start_date!)} - {formatDate(program.end_date!)}</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Clock size={16} />
+                        <Clock size={16} className="text-[#56007C]" />
                         <span>{program.duration_hours}시간</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <MapPin size={16} />
+                        <MapPin size={16} className="text-[#56007C]" />
                         <span>{program.location}</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Users size={16} />
+                        <Users size={16} className="text-[#56007C]" />
                         <span>{program.current_participants}/{program.max_participants}명</span>
                       </div>
                     </div>
@@ -305,7 +316,7 @@ export default function ProgramsPage() {
                           </div>
                         )}
                       </div>
-                      <div className="text-sm text-gray-500">
+                      <div className="text-sm">
                         {program.status === 'full' && (
                           <span className="bg-red-100 text-red-800 px-2 py-1 rounded-full">마감</span>
                         )}

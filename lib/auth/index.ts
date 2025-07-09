@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/client'
 import { Database } from '@/types/database'
+import { toast } from 'sonner'
 
 // Types
 type Profile = Database['public']['Tables']['profiles']['Row']
@@ -48,8 +49,12 @@ export async function signUp(signUpData: SignUpData): Promise<AuthResponse> {
   const supabase = createClient()
 
   try {
+    console.log('Starting signup process for:', signUpData.email)
+    toast.loading('회원가입을 진행 중입니다...')
+
     // 이메일 형식 검증
     if (!isValidEmail(signUpData.email)) {
+      toast.error('올바른 이메일 주소를 입력해주세요.')
       return {
         data: null,
         error: { message: '올바른 이메일 주소를 입력해주세요.' }
@@ -59,6 +64,7 @@ export async function signUp(signUpData: SignUpData): Promise<AuthResponse> {
     // 비밀번호 강도 검증
     const passwordValidation = validatePassword(signUpData.password)
     if (!passwordValidation.isValid) {
+      toast.error(passwordValidation.message)
       return {
         data: null,
         error: { message: passwordValidation.message }
@@ -66,8 +72,10 @@ export async function signUp(signUpData: SignUpData): Promise<AuthResponse> {
     }
 
     // 기존 사용자 확인
+    console.log('Checking if user exists...')
     const existingUser = await checkUserExists(signUpData.email)
     if (existingUser) {
+      toast.error('이미 등록된 이메일입니다.')
       return {
         data: null,
         error: { message: '이미 등록된 이메일입니다.' }
@@ -75,6 +83,7 @@ export async function signUp(signUpData: SignUpData): Promise<AuthResponse> {
     }
 
     // Supabase Auth 회원가입
+    console.log('Creating auth user...')
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email: signUpData.email,
       password: signUpData.password,
@@ -89,6 +98,7 @@ export async function signUp(signUpData: SignUpData): Promise<AuthResponse> {
 
     if (authError) {
       console.error('Auth signup error:', authError)
+      toast.error(getAuthErrorMessage(authError.message))
       return {
         data: null,
         error: { 
@@ -98,26 +108,47 @@ export async function signUp(signUpData: SignUpData): Promise<AuthResponse> {
       }
     }
 
-    // 프로필 생성 (사용자가 인증된 후 트리거에서 자동 처리되거나 수동으로 처리)
-    if (authData.user) {
-      const profileData: ProfileInsert = {
-        id: authData.user.id,
-        email: signUpData.email,
-        full_name: signUpData.full_name || null,
-        phone: signUpData.phone || null,
-        birth_date: signUpData.birth_date || null,
-        gender: signUpData.gender || null,
-        occupation: signUpData.occupation || null,
-        education_level: signUpData.education_level || null,
-        interests: signUpData.interests || null,
-        learning_goals: signUpData.learning_goals || null,
-        marketing_consent: signUpData.marketing_consent ?? false,
-        is_admin: false
+    if (!authData.user) {
+      console.error('No user returned from auth signup')
+      toast.error('회원가입 처리 중 오류가 발생했습니다.')
+      return {
+        data: null,
+        error: { message: '회원가입 처리 중 오류가 발생했습니다.' }
       }
-
-      // 프로필 생성 시도 (이미 존재하면 무시)
-      await createProfileSafely(profileData)
     }
+
+    console.log('Auth user created successfully:', authData.user.id)
+
+    // 프로필 생성
+    const profileData: ProfileInsert = {
+      id: authData.user.id,
+      email: signUpData.email,
+      full_name: signUpData.full_name || null,
+      phone: signUpData.phone || null,
+      birth_date: signUpData.birth_date || null,
+      gender: signUpData.gender || null,
+      occupation: signUpData.occupation || null,
+      education_level: signUpData.education_level || null,
+      interests: signUpData.interests || null,
+      learning_goals: signUpData.learning_goals || null,
+      marketing_consent: signUpData.marketing_consent ?? false,
+      is_admin: false
+    }
+
+    console.log('Creating profile with data:', profileData)
+    const profileCreated = await createProfileSafely(profileData)
+    
+    if (!profileCreated) {
+      console.error('Profile creation failed')
+      toast.error('프로필 생성에 실패했습니다. 관리자에게 문의하세요.')
+      return {
+        data: null,
+        error: { message: '프로필 생성에 실패했습니다.' }
+      }
+    }
+
+    console.log('Profile created successfully')
+    toast.success('회원가입이 완료되었습니다!')
 
     return {
       data: {
@@ -129,6 +160,7 @@ export async function signUp(signUpData: SignUpData): Promise<AuthResponse> {
     }
   } catch (error) {
     console.error('Signup error:', error)
+    toast.error('회원가입 중 오류가 발생했습니다.')
     return {
       data: null,
       error: { message: '회원가입 중 오류가 발생했습니다.' }
@@ -797,13 +829,22 @@ async function checkUserExists(email: string, excludeUserId?: string): Promise<b
     const { data, error } = await query
 
     if (error) {
-      console.error('Error checking user exists:', error)
+      console.log('Error checking user exists:', {
+        error,
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code
+      })
+      toast.error('사용자 확인 중 오류가 발생했습니다.')
       return false
     }
 
+    console.log('User exists check result:', { email, exists: data && data.length > 0 })
     return data && data.length > 0
   } catch (error) {
     console.error('Check user exists error:', error)
+    toast.error('사용자 확인 중 오류가 발생했습니다.')
     return false
   }
 }
@@ -811,20 +852,37 @@ async function checkUserExists(email: string, excludeUserId?: string): Promise<b
 /**
  * 프로필 안전 생성 (이미 존재하면 무시)
  * @param profileData - 프로필 데이터
+ * @returns 성공 여부
  */
-async function createProfileSafely(profileData: ProfileInsert): Promise<void> {
+async function createProfileSafely(profileData: ProfileInsert): Promise<boolean> {
   const supabase = createClient()
 
   try {
-    const { error } = await supabase
+    console.log('Attempting to create profile...')
+    const { data, error } = await supabase
       .from('profiles')
       .upsert(profileData, { onConflict: 'id' })
+      .select()
 
     if (error) {
-      console.error('Error creating profile:', error)
+      console.error('Error creating profile:', {
+        error,
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code,
+        profileData
+      })
+      toast.error('프로필 생성 중 오류가 발생했습니다.')
+      return false
     }
+
+    console.log('Profile created successfully:', data)
+    return true
   } catch (error) {
     console.error('Create profile safely error:', error)
+    toast.error('프로필 생성 중 오류가 발생했습니다.')
+    return false
   }
 }
 

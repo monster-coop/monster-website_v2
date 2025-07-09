@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Eye, EyeOff, User, Mail, Phone, Lock, Loader2 } from 'lucide-react';
 import { signUp, signInWithProvider, validatePassword, isValidEmail, SignUpData } from '@/lib/auth';
+import { toast } from 'sonner';
 
 interface SignUpFormProps {
   redirectTo?: string;
@@ -119,6 +120,7 @@ export default function SignUpForm({ redirectTo = '/dashboard', onSuccess }: Sig
 
       if (result.error) {
         setError(result.error.message);
+        // 에러 시 페이지 이동 방지
         return;
       }
 
@@ -126,6 +128,7 @@ export default function SignUpForm({ redirectTo = '/dashboard', onSuccess }: Sig
         setSuccess('회원가입이 완료되었습니다! 이메일을 확인하여 계정을 인증해주세요.');
       } else {
         setSuccess('회원가입이 완료되었습니다!');
+        // 성공 시에만 페이지 이동
         if (onSuccess) {
           onSuccess();
         } else {
@@ -135,6 +138,7 @@ export default function SignUpForm({ redirectTo = '/dashboard', onSuccess }: Sig
     } catch (error) {
       console.error('Signup error:', error);
       setError('회원가입 중 오류가 발생했습니다.');
+      toast.error('회원가입 중 오류가 발생했습니다.');
     } finally {
       setIsLoading(false);
     }
@@ -146,9 +150,11 @@ export default function SignUpForm({ redirectTo = '/dashboard', onSuccess }: Sig
       const result = await signInWithProvider(provider);
       if (result.error) {
         setError(result.error.message);
+        toast.error(result.error.message);
       }
     } catch (error) {
       setError('소셜 회원가입 중 오류가 발생했습니다.');
+      toast.error('소셜 회원가입 중 오류가 발생했습니다.');
     } finally {
       setIsLoading(false);
     }

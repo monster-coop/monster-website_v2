@@ -23,6 +23,7 @@ import { getCurrentUser, signOut } from "@/lib/auth";
 import { createClient } from '@/lib/supabase/client';
 import { Database } from "@/types/database";
 import ProfileEditModal from "@/components/profile/ProfileEditModal";
+import Footer from "@/components/Footer";
 
 type ProgramParticipant = Database['public']['Tables']['program_participants']['Row'] & {
   programs?: Database['public']['Tables']['programs']['Row'] & {
@@ -485,6 +486,9 @@ export default function DashboardPage() {
         currentProfile={profile}
         onProfileUpdated={handleProfileUpdated}
       />
+      
+      {/* Footer */}
+      <Footer />
     </div>
   );
 }

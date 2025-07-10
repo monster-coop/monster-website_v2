@@ -20,6 +20,7 @@ import Link from "next/link";
 import { getProgramBySlug } from "@/lib/database/programs-client";
 import { getCurrentUser } from "@/lib/auth";
 import { Database } from "@/types/database";
+import Footer from "@/components/Footer";
 
 type Program = Database['public']['Tables']['programs']['Row'] & {
   program_categories?: {
@@ -476,6 +477,9 @@ export default function ProgramDetailPage() {
           </motion.div>
         </div>
       </section>
+      
+      {/* Footer */}
+      <Footer />
     </div>
   );
 }

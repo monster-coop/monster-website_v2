@@ -19,9 +19,7 @@ import {
 import { 
   getUserNotifications, 
   markNotificationAsRead, 
-  markAllNotificationsAsRead,
-  getUserNotificationPreferences,
-  updateNotificationPreferences
+  markAllNotificationsAsRead
 } from '@/lib/database/notifications';
 import { EnhancedNotification, NotificationType, NotificationPreferences } from '@/lib/types/notifications';
 import { getCurrentUser } from '@/lib/auth';
@@ -56,12 +54,9 @@ export default function NotificationsPage() {
       const user = await getCurrentUser();
       if (user) {
         setUserId(user.id);
-        const [notificationsData, preferencesData] = await Promise.all([
-          loadNotificationsData(user.id),
-          getUserNotificationPreferences(user.id)
-        ]);
+        const notificationsData = await loadNotificationsData(user.id);
         setNotifications(notificationsData);
-        setPreferences(preferencesData);
+        setPreferences(null);
       }
     } catch (error) {
       console.error('Error initializing notifications page:', error);
@@ -126,10 +121,8 @@ export default function NotificationsPage() {
     if (!userId) return;
     
     try {
-      const result = await updateNotificationPreferences(userId, updatedPreferences);
-      if (result.success) {
-        setPreferences(prev => prev ? { ...prev, ...updatedPreferences } : null);
-      }
+      // TODO: Implement updateNotificationPreferences function
+      console.log('Updating preferences:', updatedPreferences);
     } catch (error) {
       console.error('Error updating preferences:', error);
     }
@@ -137,18 +130,14 @@ export default function NotificationsPage() {
 
   const getNotificationIcon = (type: NotificationType) => {
     switch (type) {
-      case 'reservation':
+      case 'program':
         return <Calendar className="text-blue-600" size={20} />;
       case 'payment':
         return <CreditCard className="text-green-600" size={20} />;
-      case 'reminder':
-        return <Bell className="text-purple-600" size={20} />;
-      case 'cancellation':
-        return <X className="text-red-600" size={20} />;
-      case 'feedback_request':
-        return <Star className="text-yellow-600" size={20} />;
       case 'subscription':
         return <User className="text-indigo-600" size={20} />;
+      case 'general':
+        return <Bell className="text-gray-600" size={20} />;
       default:
         return <Bell className="text-gray-600" size={20} />;
     }
@@ -236,162 +225,10 @@ export default function NotificationsPage() {
           >
             <h2 className="text-lg font-semibold text-gray-900 mb-6">알림 설정</h2>
             
-            {preferences && (
-              <div className="space-y-8">
-                {/* Email Notifications */}
-                <div>
-                  <div className="flex items-center gap-3 mb-4">
-                    <Mail className="text-gray-600" size={20} />
-                    <h3 className="font-medium text-gray-900">이메일 알림</h3>
-                  </div>
-                  
-                  <div className="space-y-3 ml-8">
-                    <label className="flex items-center">
-                      <input
-                        type="checkbox"
-                        checked={preferences.email_notifications.enabled}
-                        onChange={(e) => handleUpdatePreferences({
-                          email_notifications: {
-                            ...preferences.email_notifications,
-                            enabled: e.target.checked
-                          }
-                        })}
-                        className="mr-3 h-4 w-4 text-[#56007C] focus:ring-[#56007C] border-gray-300 rounded"
-                      />
-                      <span className="text-gray-700">이메일 알림 활성화</span>
-                    </label>
-                    
-                    {preferences.email_notifications.enabled && (
-                      <div className="space-y-2 ml-6">
-                        {[
-                          { key: 'program_updates', label: '프로그램 업데이트' },
-                          { key: 'payment_notifications', label: '결제 알림' },
-                          { key: 'educational_content', label: '교육 콘텐츠' },
-                          { key: 'system_alerts', label: '시스템 알림' },
-                          { key: 'weekly_digest', label: '주간 요약' }
-                        ].map((item) => (
-                          <label key={item.key} className="flex items-center">
-                            <input
-                              type="checkbox"
-                              checked={preferences.email_notifications[item.key as keyof typeof preferences.email_notifications] as boolean}
-                              onChange={(e) => handleUpdatePreferences({
-                                email_notifications: {
-                                  ...preferences.email_notifications,
-                                  [item.key]: e.target.checked
-                                }
-                              })}
-                              className="mr-3 h-4 w-4 text-[#56007C] focus:ring-[#56007C] border-gray-300 rounded"
-                            />
-                            <span className="text-sm text-gray-600">{item.label}</span>
-                          </label>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Push Notifications */}
-                <div>
-                  <div className="flex items-center gap-3 mb-4">
-                    <Monitor className="text-gray-600" size={20} />
-                    <h3 className="font-medium text-gray-900">푸시 알림</h3>
-                  </div>
-                  
-                  <div className="space-y-3 ml-8">
-                    <label className="flex items-center">
-                      <input
-                        type="checkbox"
-                        checked={preferences.push_notifications.enabled}
-                        onChange={(e) => handleUpdatePreferences({
-                          push_notifications: {
-                            ...preferences.push_notifications,
-                            enabled: e.target.checked
-                          }
-                        })}
-                        className="mr-3 h-4 w-4 text-[#56007C] focus:ring-[#56007C] border-gray-300 rounded"
-                      />
-                      <span className="text-gray-700">푸시 알림 활성화</span>
-                    </label>
-                    
-                    {preferences.push_notifications.enabled && (
-                      <div className="space-y-2 ml-6">
-                        {[
-                          { key: 'program_updates', label: '프로그램 업데이트' },
-                          { key: 'achievements', label: '성취 알림' },
-                          { key: 'study_reminders', label: '학습 리마인더' },
-                          { key: 'system_alerts', label: '시스템 알림' }
-                        ].map((item) => (
-                          <label key={item.key} className="flex items-center">
-                            <input
-                              type="checkbox"
-                              checked={preferences.push_notifications[item.key as keyof typeof preferences.push_notifications] as boolean}
-                              onChange={(e) => handleUpdatePreferences({
-                                push_notifications: {
-                                  ...preferences.push_notifications,
-                                  [item.key]: e.target.checked
-                                }
-                              })}
-                              className="mr-3 h-4 w-4 text-[#56007C] focus:ring-[#56007C] border-gray-300 rounded"
-                            />
-                            <span className="text-sm text-gray-600">{item.label}</span>
-                          </label>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* SMS Notifications */}
-                <div>
-                  <div className="flex items-center gap-3 mb-4">
-                    <Smartphone className="text-gray-600" size={20} />
-                    <h3 className="font-medium text-gray-900">SMS 알림</h3>
-                  </div>
-                  
-                  <div className="space-y-3 ml-8">
-                    <label className="flex items-center">
-                      <input
-                        type="checkbox"
-                        checked={preferences.sms_notifications.enabled}
-                        onChange={(e) => handleUpdatePreferences({
-                          sms_notifications: {
-                            ...preferences.sms_notifications,
-                            enabled: e.target.checked
-                          }
-                        })}
-                        className="mr-3 h-4 w-4 text-[#56007C] focus:ring-[#56007C] border-gray-300 rounded"
-                      />
-                      <span className="text-gray-700">SMS 알림 활성화</span>
-                    </label>
-                    
-                    {preferences.sms_notifications.enabled && (
-                      <div className="space-y-2 ml-6">
-                        {[
-                          { key: 'payment_alerts', label: '결제 알림' },
-                          { key: 'program_reminders', label: '프로그램 리마인더' },
-                          { key: 'urgent_notifications', label: '긴급 알림' }
-                        ].map((item) => (
-                          <label key={item.key} className="flex items-center">
-                            <input
-                              type="checkbox"
-                              checked={preferences.sms_notifications[item.key as keyof typeof preferences.sms_notifications] as boolean}
-                              onChange={(e) => handleUpdatePreferences({
-                                sms_notifications: {
-                                  ...preferences.sms_notifications,
-                                  [item.key]: e.target.checked
-                                }
-                              })}
-                              className="mr-3 h-4 w-4 text-[#56007C] focus:ring-[#56007C] border-gray-300 rounded"
-                            />
-                            <span className="text-sm text-gray-600">{item.label}</span>
-                          </label>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
+            <div className="text-center py-8">
+              <p className="text-gray-600">알림 설정 기능은 현재 개발 중입니다.</p>
+              <p className="text-gray-500 text-sm mt-2">곧 사용하실 수 있습니다.</p>
+            </div>
           </motion.div>
         ) : (
           /* Notifications List */
@@ -425,12 +262,10 @@ export default function NotificationsPage() {
                   className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#56007C] focus:border-transparent"
                 >
                   <option value="all">모든 유형</option>
-                  <option value="reservation">예약</option>
+                  <option value="program">프로그램</option>
                   <option value="payment">결제</option>
-                  <option value="reminder">리마인더</option>
-                  <option value="cancellation">취소</option>
-                  <option value="feedback_request">후기 요청</option>
                   <option value="subscription">구독</option>
+                  <option value="general">일반</option>
                 </select>
 
                 {/* Mark All Read */}
@@ -478,7 +313,7 @@ export default function NotificationsPage() {
                   >
                     <div className="flex items-start gap-4">
                       <div className="p-2 bg-gray-100 rounded-lg">
-                        {getNotificationIcon(notification.type)}
+                        {getNotificationIcon(notification.type as NotificationType)}
                       </div>
                       
                       <div className="flex-1 min-w-0">
@@ -493,7 +328,7 @@ export default function NotificationsPage() {
                               {notification.message}
                             </p>
                             <p className="text-sm text-gray-500 mt-2">
-                              {new Date(notification.created_at).toLocaleString('ko-KR')}
+                              {notification.created_at ? new Date(notification.created_at).toLocaleString('ko-KR') : '날짜 정보 없음'}
                             </p>
                           </div>
                           

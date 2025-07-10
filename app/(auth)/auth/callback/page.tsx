@@ -4,13 +4,14 @@ import { redirect } from 'next/navigation'
 export default async function AuthCallbackPage({
   searchParams,
 }: {
-  searchParams: { code?: string; error?: string; error_description?: string }
+  searchParams: Promise<{ code?: string; error?: string; error_description?: string }>
 }) {
   const supabase = await createClient()
+  const params = await searchParams
 
   // Handle OAuth callback
-  if (searchParams.code) {
-    const { error } = await supabase.auth.exchangeCodeForSession(searchParams.code)
+  if (params.code) {
+    const { error } = await supabase.auth.exchangeCodeForSession(params.code)
     
     if (error) {
       console.error('Auth callback error:', error)
@@ -22,9 +23,9 @@ export default async function AuthCallbackPage({
   }
 
   // Handle auth errors
-  if (searchParams.error) {
-    const errorMessage = searchParams.error_description || '인증 중 오류가 발생했습니다.'
-    redirect('/auth/login?error=' + searchParams.error + '&message=' + encodeURIComponent(errorMessage))
+  if (params.error) {
+    const errorMessage = params.error_description || '인증 중 오류가 발생했습니다.'
+    redirect('/auth/login?error=' + params.error + '&message=' + encodeURIComponent(errorMessage))
   }
 
   // No code or error - redirect to login

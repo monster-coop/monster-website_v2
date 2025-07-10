@@ -15,7 +15,8 @@ import {
   Award,
   TrendingUp,
   LogOut,
-  Phone
+  Phone,
+  Receipt
 } from "lucide-react";
 import Link from "next/link";
 import { getCurrentUser, signOut } from "@/lib/auth";
@@ -82,7 +83,7 @@ export default function DashboardPage() {
         router.push('/auth/login');
         return;
       }
-      setUser(currentUser);
+      setUser(currentUser as any);
 
       const supabase = createClient();
 
@@ -313,7 +314,7 @@ export default function DashboardPage() {
                                 {participation.programs?.program_categories?.name}
                               </p>
                             </div>
-                            {getStatusBadge(participation.status)}
+                            {getStatusBadge(participation.status || '')}
                           </div>
                           
                           <div className="space-y-1 text-sm text-gray-500">
@@ -418,6 +419,16 @@ export default function DashboardPage() {
                   </Link>
                   
                   <Link
+                    href="/dashboard/payments"
+                    className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-lg transition-colors"
+                  >
+                    <div className="p-2 bg-purple-100 rounded-lg">
+                      <Receipt className="text-purple-600" size={16} />
+                    </div>
+                    <span className="text-sm font-medium">결제 내역</span>
+                  </Link>
+                  
+                  <Link
                     href="/subscription"
                     className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-lg transition-colors"
                   >
@@ -452,7 +463,7 @@ export default function DashboardPage() {
                             {activity.programs?.title} 신청
                           </p>
                           <p className="text-xs text-gray-500">
-                            {formatDate(activity.created_at)}
+                            {formatDate(activity.created_at || '')}
                           </p>
                         </div>
                       </div>

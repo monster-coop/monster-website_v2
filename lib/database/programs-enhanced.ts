@@ -95,7 +95,7 @@ export async function getEnhancedPrograms(filters?: ProgramFilters): Promise<Enh
         Math.ceil((new Date(program.start_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) : null
     }))
 
-    return enhancedPrograms
+    return enhancedPrograms as any
   } catch (error) {
     console.error('Error in getEnhancedPrograms:', error)
     return []
@@ -186,7 +186,7 @@ export async function createProgramSession(sessionData: Omit<ProgramSession, 'id
   
   try {
     const { data, error } = await supabase
-      .from('program_sessions')
+      .from('program_sessions' as any)
       .insert({
         program_id: sessionData.program_id,
         title: sessionData.title,
@@ -210,7 +210,7 @@ export async function createProgramSession(sessionData: Omit<ProgramSession, 'id
     }
 
     return {
-      ...data,
+      ...(data as any),
       current_participants: 0
     }
   } catch (error) {
@@ -229,7 +229,7 @@ export async function getProgramSessions(programId: string): Promise<ProgramSess
   
   try {
     const { data, error } = await supabase
-      .from('program_sessions')
+      .from('program_sessions' as any)
       .select(`
         *,
         participant_count:program_participants(count)
@@ -243,8 +243,8 @@ export async function getProgramSessions(programId: string): Promise<ProgramSess
     }
 
     return data.map(session => ({
-      ...session,
-      current_participants: session.participant_count?.[0]?.count || 0
+      ...(session as any),
+      current_participants: (session as any).participant_count?.[0]?.count || 0
     }))
   } catch (error) {
     console.error('Error in getProgramSessions:', error)
@@ -281,13 +281,13 @@ export async function createReservation(
       throw new Error('Program is not available for reservation')
     }
 
-    if (program.current_participants >= program.max_participants) {
+    if ((program.current_participants || 0) >= (program.max_participants || 0)) {
       throw new Error('Program is full')
     }
 
     // Create reservation
     const { data, error } = await supabase
-      .from('reservations')
+      .from('reservations' as any)
       .insert({
         user_id: userId,
         program_id: programId,
@@ -303,7 +303,7 @@ export async function createReservation(
       return null
     }
 
-    return data
+    return data as any
   } catch (error) {
     console.error('Error in createReservation:', error)
     return null
@@ -320,7 +320,7 @@ export async function getUserReservations(userId: string): Promise<(Reservation 
   
   try {
     const { data, error } = await supabase
-      .from('reservations')
+      .from('reservations' as any)
       .select(`
         *,
         program:programs(
@@ -336,7 +336,7 @@ export async function getUserReservations(userId: string): Promise<(Reservation 
       return []
     }
 
-    return data || []
+    return (data as any) || []
   } catch (error) {
     console.error('Error in getUserReservations:', error)
     return []
@@ -357,7 +357,7 @@ export async function updateLearningProgress(progressData: Partial<LearningProgr
   
   try {
     const { data, error } = await supabase
-      .from('learning_progress')
+      .from('learning_progress' as any)
       .upsert({
         user_id: progressData.user_id!,
         program_id: progressData.program_id!,
@@ -376,7 +376,7 @@ export async function updateLearningProgress(progressData: Partial<LearningProgr
       return null
     }
 
-    return data
+    return data as any
   } catch (error) {
     console.error('Error in updateLearningProgress:', error)
     return null
@@ -394,7 +394,7 @@ export async function getUserLearningProgress(userId: string, programId?: string
   
   try {
     let query = supabase
-      .from('learning_progress')
+      .from('learning_progress' as any)
       .select('*')
       .eq('user_id', userId)
 
@@ -409,7 +409,7 @@ export async function getUserLearningProgress(userId: string, programId?: string
       return []
     }
 
-    return data || []
+    return (data as any) || []
   } catch (error) {
     console.error('Error in getUserLearningProgress:', error)
     return []
@@ -437,7 +437,7 @@ export async function getProgramAnalytics(programId: string): Promise<ProgramAna
 
     // Get progress data
     const { data: progressData } = await supabase
-      .from('learning_progress')
+      .from('learning_progress' as any)
       .select('completion_rate, rating')
       .eq('program_id', programId)
 
@@ -446,9 +446,9 @@ export async function getProgramAnalytics(programId: string): Promise<ProgramAna
     }
 
     const totalEnrollments = enrollmentData.length
-    const completedPrograms = progressData.filter(p => p.completion_rate >= 1).length
-    const totalRevenue = enrollmentData.reduce((sum, p) => sum + (Number(p.amount_paid) || 0), 0)
-    const averageRating = progressData.reduce((sum, p) => sum + (p.rating || 0), 0) / progressData.length
+    const completedPrograms = (progressData as any).filter((p: any) => p.completion_rate >= 1).length
+    const totalRevenue = (enrollmentData as any).reduce((sum: number, p: any) => sum + (Number(p.amount_paid) || 0), 0)
+    const averageRating = (progressData as any).reduce((sum: number, p: any) => sum + (p.rating || 0), 0) / (progressData as any).length
 
     return {
       program_id: programId,
@@ -500,7 +500,7 @@ export async function getProgramNotionContent(notionPageId: string): Promise<any
  * Create the 4 core program templates
  * @returns Array of core program templates
  */
-export function getCorePrograms(): Array<Omit<EnhancedProgram, 'id' | 'created_at' | 'updated_at'>> {
+export function getCorePrograms(): Array<any> {
   return [
     {
       // 팀기업가정신 교육

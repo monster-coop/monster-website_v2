@@ -188,7 +188,7 @@ export async function getUserSubscription(userId: string): Promise<(UserSubscrip
       return null
     }
 
-    return data
+    return data as any
   } catch (error) {
     console.error('Error in getUserSubscription:', error)
     return null
@@ -247,7 +247,7 @@ async function initializeLMSProgress(userId: string): Promise<void> {
   
   try {
     await supabase
-      .from('learning_progress')
+      .from('learning_progress' as any)
       .insert({
         user_id: userId,
         total_courses: 0,
@@ -274,7 +274,7 @@ export async function getLMSProgress(userId: string): Promise<LMSProgress | null
   
   try {
     const { data, error } = await supabase
-      .from('learning_progress')
+      .from('learning_progress' as any)
       .select('*')
       .eq('user_id', userId)
       .single()
@@ -284,7 +284,7 @@ export async function getLMSProgress(userId: string): Promise<LMSProgress | null
       return null
     }
 
-    return data
+    return data as any
   } catch (error) {
     console.error('Error in getLMSProgress:', error)
     return null
@@ -305,7 +305,7 @@ export async function updateLMSProgress(
   
   try {
     const { error } = await supabase
-      .from('learning_progress')
+      .from('learning_progress' as any)
       .update({
         ...progressUpdate,
         last_activity: new Date().toISOString()

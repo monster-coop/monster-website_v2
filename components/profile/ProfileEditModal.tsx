@@ -52,7 +52,7 @@ export default function ProfileEditModal({
         full_name: currentProfile.full_name || '',
         phone: currentProfile.phone || '',
         birth_date: currentProfile.birth_date || '',
-        gender: currentProfile.gender || '',
+        gender: currentProfile.gender as 'male' | 'female' | 'other' | '',
         occupation: currentProfile.occupation || '',
         education_level: currentProfile.education_level || '',
         interests: currentProfile.interests || [],
@@ -131,7 +131,7 @@ export default function ProfileEditModal({
       });
 
       // 성공 시 부모 컴포넌트에 업데이트된 프로필 전달
-      onProfileUpdated(result);
+      onProfileUpdated(result as any);
       onClose();
 
     } catch (error) {

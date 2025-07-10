@@ -156,28 +156,13 @@ export interface TossPaymentResponse {
   }
 }
 
-// Coupon and discount system
-export interface Coupon {
-  id: string
-  code: string
-  name: string
-  discount_type: 'percentage' | 'fixed'
-  discount_value: number
-  min_amount?: number
-  max_discount?: number
-  valid_from: string
-  valid_until: string
-  usage_limit?: number
-  used_count: number
-  is_active: boolean
-  applicable_programs?: string[]
-}
+// Note: Coupon system removed as coupons table is not defined in the current database schema
 
 export interface DiscountCalculation {
   original_amount: number
   discount_amount: number
   final_amount: number
-  coupon_applied?: Coupon
+  coupon_applied?: any
   early_bird_discount?: number
   loyalty_discount?: number
 }
@@ -192,17 +177,7 @@ export interface NotificationPreferences {
   payment_notifications: boolean
 }
 
-// Waitlist management
-export interface WaitlistEntry {
-  id: string
-  user_id: string
-  program_id: string
-  session_id?: string
-  position: number
-  notification_sent: boolean
-  expires_at: string
-  created_at: string
-}
+// Note: Waitlist management removed as waitlist table is not defined in the current database schema
 
 // Refund management
 export interface RefundRequest {

@@ -41,8 +41,8 @@ export async function getAdminDashboardStats(): Promise<AdminDashboardStats> {
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
     const sixtyDaysAgo = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString()
     
-    const recentUsers = usersData.data?.filter(u => u.created_at > thirtyDaysAgo).length || 0
-    const previousUsers = usersData.data?.filter(u => u.created_at > sixtyDaysAgo && u.created_at <= thirtyDaysAgo).length || 0
+    const recentUsers = usersData.data?.filter(u => u.created_at && u.created_at > thirtyDaysAgo).length || 0
+    const previousUsers = usersData.data?.filter(u => u.created_at && u.created_at > sixtyDaysAgo && u.created_at <= thirtyDaysAgo).length || 0
     const growthRate = previousUsers > 0 ? ((recentUsers - previousUsers) / previousUsers) * 100 : 0
 
     // Program stats
@@ -152,9 +152,9 @@ export async function getAdminUsers(filters?: AdminUserFilters): Promise<AdminUs
       id: user.id,
       email: user.email,
       full_name: user.full_name || 'Unknown',
-      phone: user.phone,
-      registration_date: user.created_at,
-      last_login: user.updated_at, // Approximation
+      phone: user.phone || '',
+      registration_date: user.created_at || '',
+      last_login: user.updated_at || '', // Approximation
       status: 'active', // TODO: Implement user status tracking
       subscription: {
         plan: user.subscription?.[0]?.plan?.name || 'None',
@@ -183,9 +183,9 @@ export async function getAdminUsers(filters?: AdminUserFilters): Promise<AdminUs
       })) || [],
       support_tickets: [], // TODO: Implement support ticket system
       activity_summary: {
-        total_logins: 0, // TODO: Implement login tracking
+        total_logins: 0, // TODO: Impl  ement login tracking
         avg_session_duration: 0,
-        last_activity: user.updated_at,
+        last_activity: user.updated_at || '',
         engagement_score: 0,
         programs_completed: user.program_history?.filter((ph: any) => ph.status === 'completed').length || 0,
         subscription_length: 0, // TODO: Calculate subscription length
@@ -213,16 +213,16 @@ export async function updateUserStatus(
   const supabase = createClient()
   
   try {
-    // Log admin action
+    // Log admin action to notifications table
     await supabase
-      .from('audit_logs')
+      .from('notifications')
       .insert({
-        admin_id: adminId,
-        action: 'update_user_status',
-        resource_type: 'user',
-        resource_id: userId,
-        details: { new_status: status },
-        timestamp: new Date().toISOString()
+        type: 'general',
+        user_id: userId,
+        title: 'User Status Updated',
+        message: `User ${userId} status updated to ${status} by admin ${adminId}`,
+        action_url: `/admin/users/${userId}`,
+        is_read: false
       })
 
     // TODO: Implement user status field in profiles table
@@ -292,12 +292,12 @@ export async function getAdminPrograms(filters?: AdminProgramFilters): Promise<A
         title: program.title,
         category: program.category?.name || 'Uncategorized',
         instructor: program.instructor_name || 'TBD',
-        status: program.status,
+        status: program.status || '',
         enrollment: {
           current: program.current_participants || 0,
           maximum: program.max_participants || 0,
           minimum: program.min_participants || 0,
-          utilization_rate: program.max_participants > 0 ? 
+          utilization_rate: program.max_participants && program.max_participants > 0 ? 
             (program.current_participants || 0) / program.max_participants : 0
         },
         schedule: {
@@ -488,93 +488,6 @@ export async function getSystemHealth(): Promise<SystemHealth> {
       payment_system: { status: 'critical', success_rate: 0, average_processing_time: 0, failed_transactions: 0 },
       notification_system: { status: 'critical', delivery_rate: 0, bounce_rate: 1, queue_size: 0 }
     }
-  }
-}
-
-// ================================
-// AUDIT LOGGING
-// ================================
-
-/**
- * Create audit log entry
- * @param logData - Audit log data
- * @returns Created log entry
- */
-export async function createAuditLog(logData: Omit<AuditLog, 'id' | 'timestamp'>): Promise<AuditLog | null> {
-  const supabase = createClient()
-  
-  try {
-    const { data, error } = await supabase
-      .from('audit_logs')
-      .insert({
-        ...logData,
-        timestamp: new Date().toISOString()
-      })
-      .select()
-      .single()
-
-    if (error) {
-      console.error('Error creating audit log:', error)
-      return null
-    }
-
-    return data
-  } catch (error) {
-    console.error('Error in createAuditLog:', error)
-    return null
-  }
-}
-
-/**
- * Get audit logs with filters
- * @param filters - Filter options
- * @returns Filtered audit logs
- */
-export async function getAuditLogs(filters?: {
-  user_id?: string
-  action?: string
-  resource_type?: string
-  date_range?: { start: string; end: string }
-  limit?: number
-}): Promise<AuditLog[]> {
-  const supabase = createClient()
-  
-  try {
-    let query = supabase
-      .from('audit_logs')
-      .select('*')
-
-    if (filters?.user_id) {
-      query = query.eq('user_id', filters.user_id)
-    }
-
-    if (filters?.action) {
-      query = query.eq('action', filters.action)
-    }
-
-    if (filters?.resource_type) {
-      query = query.eq('resource_type', filters.resource_type)
-    }
-
-    if (filters?.date_range) {
-      query = query
-        .gte('timestamp', filters.date_range.start)
-        .lte('timestamp', filters.date_range.end)
-    }
-
-    const { data, error } = await query
-      .order('timestamp', { ascending: false })
-      .limit(filters?.limit || 100)
-
-    if (error) {
-      console.error('Error fetching audit logs:', error)
-      return []
-    }
-
-    return data || []
-  } catch (error) {
-    console.error('Error in getAuditLogs:', error)
-    return []
   }
 }
 

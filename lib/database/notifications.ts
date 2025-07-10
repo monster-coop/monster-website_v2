@@ -4,8 +4,6 @@ import {
   NotificationChannel,
   NotificationType,
   NotificationPriority,
-  EmailTemplate,
-  EmailCampaign,
   NotificationPreferences,
   NotificationAnalytics
 } from '@/lib/types/notifications'
@@ -36,13 +34,13 @@ export async function sendNotification(
   
   try {
     // Get user preferences
-    const preferences = await getUserNotificationPreferences(userId)
+    const preferences = await getUserNotifications(userId)
     if (!preferences) {
       return { success: false, error: '사용자 알림 설정을 찾을 수 없습니다.' }
     }
 
     // Filter channels based on user preferences
-    const allowedChannels = filterChannelsByPreferences(notification.channels, preferences)
+    const allowedChannels = filterChannelsByPreferences(notification.channels, preferences as unknown as NotificationPreferences)
     if (allowedChannels.length === 0) {
       return { success: false, error: '사용자가 모든 알림 채널을 비활성화했습니다.' }
     }
@@ -142,13 +140,14 @@ async function sendEmailNotification(userId: string, notification: any, notifica
 
     // Log email sent
     await supabase
-      .from('notification_logs')
+      .from('notifications')
       .insert({
-        notification_id: notificationId,
-        channel: 'email',
-        recipient: user.email,
-        status: 'sent',
-        sent_at: new Date().toISOString()
+        type: 'general',
+        user_id: userId,
+        title: notification.title,
+        message: notification.message,
+        action_url: notification.action_url,
+        is_read: false
       })
   } catch (error) {
     console.error('Error sending email notification:', error)
@@ -183,13 +182,14 @@ async function sendSMSNotification(userId: string, notification: any, notificati
 
     // Log SMS sent
     await supabase
-      .from('notification_logs')
+      .from('notifications')
       .insert({
-        notification_id: notificationId,
-        channel: 'sms',
-        recipient: user.phone,
-        status: 'sent',
-        sent_at: new Date().toISOString()
+        type: 'general',
+        user_id: userId,
+        title: notification.title,
+        message: notification.message,
+        action_url: notification.action_url,
+        is_read: false
       })
   } catch (error) {
     console.error('Error sending SMS notification:', error)
@@ -217,13 +217,14 @@ async function sendPushNotification(userId: string, notification: any, notificat
 
     // Log push notification sent
     await supabase
-      .from('notification_logs')
+      .from('notifications')
       .insert({
-        notification_id: notificationId,
-        channel: 'push',
-        recipient: userId,
-        status: 'sent',
-        sent_at: new Date().toISOString()
+        type: 'general',
+        user_id: userId,
+        title: notification.title,
+        message: notification.message,
+        action_url: notification.action_url,
+        is_read: false
       })
   } catch (error) {
     console.error('Error sending push notification:', error)
@@ -234,134 +235,11 @@ async function sendPushNotification(userId: string, notification: any, notificat
 // USER PREFERENCE MANAGEMENT
 // ================================
 
-/**
- * Get user notification preferences
- * @param userId - User ID
- * @returns User notification preferences
- */
-export async function getUserNotificationPreferences(userId: string): Promise<NotificationPreferences | null> {
-  const supabase = createClient()
-  
-  try {
-    const { data, error } = await supabase
-      .from('notification_preferences')
-      .select('*')
-      .eq('user_id', userId)
-      .single()
 
-    if (error) {
-      // Create default preferences if none exist
-      return await createDefaultNotificationPreferences(userId)
-    }
 
-    return data
-  } catch (error) {
-    console.error('Error getting notification preferences:', error)
-    return null
-  }
-}
 
-/**
- * Create default notification preferences for new user
- * @param userId - User ID
- * @returns Created preferences
- */
-async function createDefaultNotificationPreferences(userId: string): Promise<NotificationPreferences | null> {
-  const supabase = createClient()
-  
-  try {
-    const defaultPreferences: Omit<NotificationPreferences, 'updated_at'> = {
-      user_id: userId,
-      email_notifications: {
-        enabled: true,
-        program_updates: true,
-        payment_notifications: true,
-        marketing_emails: false,
-        educational_content: true,
-        system_alerts: true,
-        weekly_digest: true
-      },
-      sms_notifications: {
-        enabled: false,
-        payment_alerts: true,
-        program_reminders: true,
-        urgent_notifications: true,
-        verification_codes: true
-      },
-      push_notifications: {
-        enabled: true,
-        program_updates: true,
-        achievements: true,
-        social_interactions: true,
-        study_reminders: true,
-        system_alerts: true
-      },
-      frequency_settings: {
-        max_emails_per_day: 3,
-        max_sms_per_week: 2,
-        max_push_per_day: 5,
-        quiet_hours: {
-          start: '22:00',
-          end: '08:00',
-          timezone: 'Asia/Seoul'
-        },
-        preferred_days: [1, 2, 3, 4, 5] // Monday to Friday
-      }
-    }
 
-    const { data, error } = await supabase
-      .from('notification_preferences')
-      .insert({
-        ...defaultPreferences,
-        updated_at: new Date().toISOString()
-      })
-      .select()
-      .single()
 
-    if (error) {
-      console.error('Error creating default preferences:', error)
-      return null
-    }
-
-    return data
-  } catch (error) {
-    console.error('Error in createDefaultNotificationPreferences:', error)
-    return null
-  }
-}
-
-/**
- * Update user notification preferences
- * @param userId - User ID
- * @param preferences - Updated preferences
- * @returns Update result
- */
-export async function updateNotificationPreferences(
-  userId: string,
-  preferences: Partial<NotificationPreferences>
-): Promise<{ success: boolean; error?: string }> {
-  const supabase = createClient()
-  
-  try {
-    const { error } = await supabase
-      .from('notification_preferences')
-      .update({
-        ...preferences,
-        updated_at: new Date().toISOString()
-      })
-      .eq('user_id', userId)
-
-    if (error) {
-      console.error('Error updating notification preferences:', error)
-      return { success: false, error: '알림 설정 업데이트에 실패했습니다.' }
-    }
-
-    return { success: true }
-  } catch (error) {
-    console.error('Error in updateNotificationPreferences:', error)
-    return { success: false, error: '알림 설정 업데이트 중 오류가 발생했습니다.' }
-  }
-}
 
 /**
  * Filter channels based on user preferences
@@ -509,70 +387,7 @@ export async function markAllNotificationsAsRead(userId: string): Promise<{ succ
 // TEMPLATE MANAGEMENT
 // ================================
 
-/**
- * Get email templates
- * @param category - Template category filter
- * @returns Email templates
- */
-export async function getEmailTemplates(category?: string): Promise<EmailTemplate[]> {
-  const supabase = createClient()
-  
-  try {
-    let query = supabase
-      .from('email_templates')
-      .select('*')
-      .eq('is_active', true)
 
-    if (category) {
-      query = query.eq('category', category)
-    }
-
-    const { data, error } = await query.order('name', { ascending: true })
-
-    if (error) {
-      console.error('Error fetching email templates:', error)
-      return []
-    }
-
-    return data || []
-  } catch (error) {
-    console.error('Error in getEmailTemplates:', error)
-    return []
-  }
-}
-
-/**
- * Create email template
- * @param template - Template data
- * @returns Created template
- */
-export async function createEmailTemplate(
-  template: Omit<EmailTemplate, 'id' | 'created_at' | 'updated_at'>
-): Promise<{ success: boolean; template?: EmailTemplate; error?: string }> {
-  const supabase = createClient()
-  
-  try {
-    const { data, error } = await supabase
-      .from('email_templates')
-      .insert({
-        ...template,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      })
-      .select()
-      .single()
-
-    if (error) {
-      console.error('Error creating email template:', error)
-      return { success: false, error: '이메일 템플릿 생성에 실패했습니다.' }
-    }
-
-    return { success: true, template: data }
-  } catch (error) {
-    console.error('Error in createEmailTemplate:', error)
-    return { success: false, error: '이메일 템플릿 생성 중 오류가 발생했습니다.' }
-  }
-}
 
 // ================================
 // ANALYTICS AND REPORTING
@@ -618,10 +433,10 @@ export async function getNotificationAnalytics(period: string = 'monthly'): Prom
 
     // Get notification logs for channel analysis
     const { data: logs } = await supabase
-      .from('notification_logs')
-      .select('channel, status, sent_at')
-      .gte('sent_at', startDate.toISOString())
-      .lte('sent_at', endDate.toISOString())
+      .from('notifications')
+      .select('type, created_at, is_read')
+      .gte('created_at', startDate.toISOString())
+      .lte('created_at', endDate.toISOString())
 
     return {
       period,
@@ -629,8 +444,8 @@ export async function getNotificationAnalytics(period: string = 'monthly'): Prom
       by_channel: [
         {
           channel: 'email',
-          sent_count: logs?.filter(l => l.channel === 'email').length || 0,
-          delivered_count: logs?.filter(l => l.channel === 'email' && l.status === 'delivered').length || 0,
+          sent_count: logs?.filter(l => l.type === 'email').length || 0,
+          delivered_count: logs?.filter(l => l.type === 'email' && l.is_read).length || 0,
           opened_count: 0, // TODO: Implement open tracking
           clicked_count: 0, // TODO: Implement click tracking
           delivery_rate: 0.95,
@@ -638,8 +453,8 @@ export async function getNotificationAnalytics(period: string = 'monthly'): Prom
         },
         {
           channel: 'sms',
-          sent_count: logs?.filter(l => l.channel === 'sms').length || 0,
-          delivered_count: logs?.filter(l => l.channel === 'sms' && l.status === 'delivered').length || 0,
+          sent_count: logs?.filter(l => l.type === 'sms').length || 0,
+          delivered_count: logs?.filter(l => l.type === 'sms' && l.is_read).length || 0,
           opened_count: 0,
           clicked_count: 0,
           delivery_rate: 0.98,
@@ -647,8 +462,8 @@ export async function getNotificationAnalytics(period: string = 'monthly'): Prom
         },
         {
           channel: 'push',
-          sent_count: logs?.filter(l => l.channel === 'push').length || 0,
-          delivered_count: logs?.filter(l => l.channel === 'push' && l.status === 'delivered').length || 0,
+          sent_count: logs?.filter(l => l.type === 'push').length || 0,
+          delivered_count: logs?.filter(l => l.type === 'push' && l.is_read).length || 0,
           opened_count: 0,
           clicked_count: 0,
           delivery_rate: 0.92,
@@ -726,10 +541,10 @@ export async function sendReservationConfirmation(reservationId: string): Promis
     const program = reservation.programs
     const user = reservation.profiles
 
-    return await sendNotification(reservation.user_id, {
+    return await sendNotification(reservation.user_id || '', {
       title: '프로그램 예약 확인',
-      message: `${program.title} 프로그램 예약이 완료되었습니다. 시작일: ${new Date(program.start_date).toLocaleDateString('ko-KR')}`,
-      type: 'reservation',
+      message: `${program.title} 프로그램 예약이 완료되었습니다. 시작일: ${new Date(program.start_date || '').toLocaleDateString('ko-KR')}`,
+      type: 'program',
       channels: ['email', 'in_app'],
       priority: 'high',
       action_url: `/dashboard`,
@@ -774,7 +589,7 @@ export async function sendPaymentConfirmation(paymentId: string): Promise<{ succ
 
     const program = payment.program_participants.programs
 
-    return await sendNotification(payment.user_id, {
+    return await sendNotification(payment.user_id || '', {
       title: '결제 완료',
       message: `${program.title} 프로그램 결제가 완료되었습니다. 결제금액: ${payment.amount.toLocaleString('ko-KR')}원`,
       type: 'payment',
@@ -826,10 +641,10 @@ export async function sendProgramReminder(programId: string): Promise<{ success:
 
     // Send reminders to all participants
     const sendPromises = participants.map(participant => 
-      sendNotification(participant.user_id, {
+      sendNotification(participant.user_id || '', {
         title: '프로그램 시작 안내',
-        message: `내일 시작하는 ${program.title} 프로그램을 잊지 마세요! 시간: ${new Date(program.start_date).toLocaleString('ko-KR')}, 장소: ${program.location}`,
-        type: 'reminder',
+        message: `내일 시작하는 ${program.title} 프로그램을 잊지 마세요! 시간: ${new Date(program.start_date || '').toLocaleString('ko-KR')}, 장소: ${program.location}`,
+        type: 'program',
         channels: ['email', 'push', 'in_app'],
         priority: 'high',
         action_url: `/programs/${programId}`,
@@ -881,10 +696,10 @@ export async function sendCancellationConfirmation(
 
     const program = reservation.programs
 
-    return await sendNotification(reservation.user_id, {
+    return await sendNotification(reservation.user_id || '', {
       title: '예약 취소 확인',
       message: `${program.title} 프로그램 예약이 취소되었습니다.${reason ? ` 사유: ${reason}` : ''} 환불 처리는 2-3일 소요됩니다.`,
-      type: 'cancellation',
+      type: 'general',
       channels: ['email', 'in_app'],
       priority: 'normal',
       action_url: `/dashboard`,
@@ -944,7 +759,7 @@ export async function sendProgramNotification(
     // Send notifications to all target users
     const notifications = getNotificationContent(type, program)
     const sendPromises = targetUsers.map(userId => 
-      sendNotification(userId, {
+      sendNotification(userId || '', {
         ...notifications,
         type: 'program',
         channels: ['email', 'in_app'],

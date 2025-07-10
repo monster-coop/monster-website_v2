@@ -3,8 +3,8 @@ import { Database } from '@/types/database'
 // Core notification types
 export type Notification = Database['public']['Tables']['notifications']['Row']
 
-// Enhanced notification types
-export type NotificationType = 'program' | 'payment' | 'subscription' | 'general' | 'system' | 'marketing'
+// Enhanced notification types (aligned with database schema)
+export type NotificationType = 'program' | 'payment' | 'subscription' | 'general'
 export type NotificationChannel = 'email' | 'sms' | 'push' | 'in_app'
 export type NotificationPriority = 'low' | 'normal' | 'high' | 'urgent'
 export type NotificationStatus = 'pending' | 'sent' | 'delivered' | 'read' | 'failed'

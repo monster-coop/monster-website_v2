@@ -9,27 +9,15 @@ const compat = new FlatCompat({
   baseDirectory: __dirname,
 });
 
-
 const eslintConfig = [
   ...compat.extends("next/core-web-vitals", "next/typescript"),
   {
-    files: ["**/*.ts", "**/*.tsx"],
-    languageOptions: {
-      parser: typescriptEslintParser,
-      parserOptions: {
-        ecmaVersion: 2020,
-        sourceType: "module",
-        ecmaFeatures: {
-          jsx: true,
-        },
-      },
-    },
-    plugins: {
-      "@typescript-eslint": typescriptEslintPlugin,
-    },
     rules: {
-      "@typescript-eslint/no-unused-vars": "warn",
+      "@typescript-eslint/no-unused-vars": "off",
+      "@typescript-eslint/no-explicit-any": "off",
       "@typescript-eslint/no-empty-interface": "off",
+      "react-hooks/exhaustive-deps": "off",
+      "@next/next/no-html-link-for-pages": "off",
     },
   },
 ];

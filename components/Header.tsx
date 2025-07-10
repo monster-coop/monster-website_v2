@@ -29,7 +29,7 @@ export default function Header() {
           .select("full_name")
           .eq("id", user.id)
           .single();
-        setProfile(profile);
+        setProfile(profile as any);
       }
     };
 
@@ -48,7 +48,7 @@ export default function Header() {
           .select("full_name")
           .eq("id", session.user.id)
           .single();
-        setProfile(profile);
+        setProfile(profile as any);
       } else {
         setProfile(null);
       }

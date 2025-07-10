@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/client'
 import { Database } from '@/types/database'
-import { TossPaymentRequest, TossPaymentResponse, Coupon } from '@/lib/types/reservations'
+import { TossPaymentRequest, TossPaymentResponse } from '@/lib/types/reservations'
 import { sendPaymentConfirmation } from '@/lib/database/notifications'
 
 // Types
@@ -49,9 +49,9 @@ export async function initiateTossPayment(paymentData: {
     // 2. TossPayments 클라이언트 키 반환
     return {
       payment,
-      clientKey: process.env.NEXT_PUBLIC_TOSS_PAYMENTS_CLIENT_KEY,
-      successUrl: `${process.env.NEXT_PUBLIC_SITE_URL}/payments/success`,
-      failUrl: `${process.env.NEXT_PUBLIC_SITE_URL}/payments/fail`
+      clientKey: process.env.NEXT_PUBLIC_TOSSPAYMENT_CLIENT_KEY || process.env.TOSSPAYMENT_CLIENT_KEY,
+      successUrl: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/payments/success`,
+      failUrl: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/payments/fail`
     }
 
   } catch (error) {
@@ -77,7 +77,7 @@ export async function confirmTossPayment(
     const response = await fetch('https://api.tosspayments.com/v1/payments/confirm', {
       method: 'POST',
       headers: {
-        'Authorization': `Basic ${Buffer.from(process.env.TOSS_PAYMENTS_SECRET_KEY + ':').toString('base64')}`,
+        'Authorization': `Basic ${Buffer.from((process.env.TOSSPAYMENT_SECRETE_KEY || process.env.TOSS_PAYMENTS_SECRET_KEY) + ':').toString('base64')}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({

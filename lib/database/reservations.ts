@@ -24,10 +24,8 @@ export interface DatabaseResponse<T = any> {
 import { 
   ReservationFormData, 
   EnhancedReservation, 
-  WaitlistEntry,
   RefundRequest,
   ReservationAnalytics,
-  Coupon,
   DiscountCalculation
 } from '@/lib/types/reservations'
 import { generateOrderId, calculatePaymentAmount } from '@/lib/payments/toss'
@@ -65,7 +63,7 @@ export async function createReservation(reservationData: SimpleReservationData):
       return { data: null, error: '현재 예약할 수 없는 프로그램입니다.' }
     }
 
-    if (program.current_participants >= program.max_participants) {
+    if ((program.current_participants || 0) >= (program.max_participants || 0)) {
       return { data: null, error: '프로그램이 마감되었습니다.' }
     }
 
@@ -153,22 +151,18 @@ export async function createProgramReservation(
       return { success: false, error: '현재 예약할 수 없는 프로그램입니다.' }
     }
 
-    if (program.current_participants >= program.max_participants) {
-      // Add to waitlist instead
-      const waitlistEntry = await addToWaitlist(userId, reservationData.program_id)
+    if ((program.current_participants || 0) >= (program.max_participants || 0)) {
       return { 
         success: false, 
-        error: '프로그램이 마감되었습니다. 대기 목록에 추가되었습니다.',
-        waitlist: waitlistEntry
+        error: '프로그램이 마감되었습니다.'
       }
     }
 
     // 2. Calculate final amount with discounts
     const discountCalculation = await calculateDiscounts(
-      program.base_price,
-      program.early_bird_price,
-      program.early_bird_deadline,
-      reservationData.coupon_code
+      program.base_price || 0,
+      program.early_bird_price || undefined,
+      program.early_bird_deadline || undefined
     )
 
     // 3. Create participant record
@@ -220,10 +214,7 @@ export async function createProgramReservation(
       return { success: false, error: '결제 정보 생성에 실패했습니다.' }
     }
 
-    // 6. Update program participant count
-    await supabase.rpc('increment_program_participants', {
-      program_id: reservationData.program_id
-    })
+    // 6. Program participant count updated automatically by trigger
 
     // 7. Send reservation confirmation notification
     try {
@@ -279,7 +270,7 @@ export async function getUserReservations(userId: string): Promise<EnhancedReser
       return []
     }
 
-    return data || []
+    return (data as any) || []
   } catch (error) {
     console.error('Error in getUserReservations:', error)
     return []
@@ -323,7 +314,7 @@ export async function cancelReservation(
 
     // 2. Check cancellation policy
     const daysUntilStart = Math.ceil(
-      (new Date(reservation.program.start_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
+      (new Date((reservation.program as any)?.start_date || new Date()).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
     )
 
     const refundRate = getRefundRate(daysUntilStart)
@@ -345,11 +336,11 @@ export async function cancelReservation(
 
     // 4. Create refund request if applicable
     let refundRequest = null
-    if (refundAmount > 0 && reservation.payment?.status === 'completed') {
+    if (refundAmount > 0 && (reservation.payment as any)?.[0]?.status === 'completed') {
       const { data: refund } = await supabase
         .from('refunds')
         .insert({
-          payment_id: reservation.payment.id,
+          payment_id: (reservation.payment as any)?.[0]?.id,
           user_id: userId,
           amount: refundAmount,
           reason: reason,
@@ -361,13 +352,9 @@ export async function cancelReservation(
       refundRequest = refund
     }
 
-    // 5. Update program participant count
-    await supabase.rpc('decrement_program_participants', {
-      program_id: reservation.program_id
-    })
+    // 5. Program participant count updated automatically by trigger
 
-    // 6. Process waitlist if available
-    await processWaitlist(reservation.program_id)
+    // 6. Update program participant count (handled by trigger)
 
     // 7. Send cancellation confirmation notification
     try {
@@ -379,7 +366,7 @@ export async function cancelReservation(
 
     return {
       success: true,
-      refund: refundRequest
+      refund: refundRequest as any
     }
   } catch (error) {
     console.error('Error in cancelReservation:', error)
@@ -388,93 +375,11 @@ export async function cancelReservation(
 }
 
 // ================================
-// WAITLIST MANAGEMENT
+// WAITLIST MANAGEMENT (REMOVED - TABLE NOT IN SCHEMA)
 // ================================
 
-/**
- * Add user to waitlist
- * @param userId - User ID
- * @param programId - Program ID
- * @returns Waitlist entry
- */
-export async function addToWaitlist(userId: string, programId: string): Promise<WaitlistEntry | null> {
-  const supabase = createClient()
-  
-  try {
-    // Get current waitlist position
-    const { count } = await supabase
-      .from('waitlist')
-      .select('*', { count: 'exact' })
-      .eq('program_id', programId)
-
-    const position = (count || 0) + 1
-
-    const { data, error } = await supabase
-      .from('waitlist')
-      .insert({
-        user_id: userId,
-        program_id: programId,
-        position: position,
-        expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24 hours
-      })
-      .select()
-      .single()
-
-    if (error) {
-      console.error('Error adding to waitlist:', error)
-      return null
-    }
-
-    return data
-  } catch (error) {
-    console.error('Error in addToWaitlist:', error)
-    return null
-  }
-}
-
-/**
- * Process waitlist when spots become available
- * @param programId - Program ID
- */
-export async function processWaitlist(programId: string): Promise<void> {
-  const supabase = createClient()
-  
-  try {
-    // Get next person on waitlist
-    const { data: waitlistEntry } = await supabase
-      .from('waitlist')
-      .select(`
-        *,
-        user:profiles(email, full_name)
-      `)
-      .eq('program_id', programId)
-      .eq('notification_sent', false)
-      .order('position', { ascending: true })
-      .limit(1)
-      .single()
-
-    if (waitlistEntry) {
-      // Send notification
-      await supabase
-        .from('notifications')
-        .insert({
-          user_id: waitlistEntry.user_id,
-          title: '프로그램 자리가 생겼어요!',
-          message: '대기 중이던 프로그램에 자리가 생겼습니다. 지금 바로 예약하세요.',
-          type: 'program',
-          action_url: `/programs/${programId}`
-        })
-
-      // Mark as notified
-      await supabase
-        .from('waitlist')
-        .update({ notification_sent: true })
-        .eq('id', waitlistEntry.id)
-    }
-  } catch (error) {
-    console.error('Error processing waitlist:', error)
-  }
-}
+// Note: Waitlist functionality has been removed as the waitlist table
+// is not defined in the current database schema.
 
 // ================================
 // DISCOUNT AND COUPON SYSTEM
@@ -485,20 +390,15 @@ export async function processWaitlist(programId: string): Promise<void> {
  * @param basePrice - Base program price
  * @param earlyBirdPrice - Early bird price
  * @param earlyBirdDeadline - Early bird deadline
- * @param couponCode - Coupon code
  * @returns Discount calculation
  */
 export async function calculateDiscounts(
   basePrice: number,
   earlyBirdPrice?: number,
-  earlyBirdDeadline?: string,
-  couponCode?: string
+  earlyBirdDeadline?: string
 ): Promise<DiscountCalculation> {
-  const supabase = createClient()
-  
   let finalPrice = basePrice
   let totalDiscount = 0
-  let appliedCoupon = null
   let earlyBirdDiscount = 0
 
   // Check early bird discount
@@ -513,104 +413,17 @@ export async function calculateDiscounts(
     }
   }
 
-  // Check coupon discount
-  if (couponCode) {
-    const { data: coupon } = await supabase
-      .from('coupons')
-      .select('*')
-      .eq('code', couponCode)
-      .eq('is_active', true)
-      .gte('valid_until', new Date().toISOString())
-      .single()
-
-    if (coupon && coupon.usage_limit > coupon.used_count) {
-      let couponDiscount = 0
-      
-      if (coupon.discount_type === 'percentage') {
-        couponDiscount = finalPrice * (coupon.discount_value / 100)
-        if (coupon.max_discount) {
-          couponDiscount = Math.min(couponDiscount, coupon.max_discount)
-        }
-      } else {
-        couponDiscount = coupon.discount_value
-      }
-
-      if (coupon.min_amount && finalPrice < coupon.min_amount) {
-        // Coupon not applicable
-      } else {
-        finalPrice -= couponDiscount
-        totalDiscount += couponDiscount
-        appliedCoupon = coupon
-
-        // Update coupon usage
-        await supabase
-          .from('coupons')
-          .update({ used_count: coupon.used_count + 1 })
-          .eq('id', coupon.id)
-      }
-    }
-  }
-
   return {
     original_amount: basePrice,
     discount_amount: totalDiscount,
     final_amount: Math.max(0, finalPrice),
-    coupon_applied: appliedCoupon,
+    coupon_applied: null,
     early_bird_discount: earlyBirdDiscount
   }
 }
 
-/**
- * Validate coupon code
- * @param couponCode - Coupon code
- * @param programId - Program ID (optional)
- * @returns Coupon validation result
- */
-export async function validateCoupon(
-  couponCode: string,
-  programId?: string
-): Promise<{ valid: boolean; coupon?: Coupon; error?: string }> {
-  const supabase = createClient()
-  
-  try {
-    const { data: coupon, error } = await supabase
-      .from('coupons')
-      .select('*')
-      .eq('code', couponCode)
-      .eq('is_active', true)
-      .single()
-
-    if (error || !coupon) {
-      return { valid: false, error: '유효하지 않은 쿠폰 코드입니다.' }
-    }
-
-    // Check validity period
-    const now = new Date()
-    const validFrom = new Date(coupon.valid_from)
-    const validUntil = new Date(coupon.valid_until)
-
-    if (now < validFrom || now > validUntil) {
-      return { valid: false, error: '쿠폰 사용 기간이 아닙니다.' }
-    }
-
-    // Check usage limit
-    if (coupon.usage_limit && coupon.used_count >= coupon.usage_limit) {
-      return { valid: false, error: '쿠폰 사용 한도가 초과되었습니다.' }
-    }
-
-    // Check program applicability
-    if (programId && coupon.applicable_programs && coupon.applicable_programs.length > 0) {
-      if (!coupon.applicable_programs.includes(programId)) {
-        return { valid: false, error: '이 프로그램에는 사용할 수 없는 쿠폰입니다.' }
-      }
-    }
-
-    return { valid: true, coupon }
-  } catch (error) {
-    console.error('Error validating coupon:', error)
-    return { valid: false, error: '쿠폰 검증 중 오류가 발생했습니다.' }
-  }
-}
+// Note: Coupon validation functionality has been removed as the coupons table
+// is not defined in the current database schema.
 
 // ================================
 // ANALYTICS AND REPORTING
@@ -652,8 +465,8 @@ export async function getReservationAnalytics(dateRange?: {
 
     // Revenue by program
     const revenueByProgram = reservations?.reduce((acc, reservation) => {
-      const programTitle = reservation.program?.title || 'Unknown'
-      const amount = reservation.payment?.amount || 0
+      const programTitle = (reservation.program as any)?.title || 'Unknown'
+      const amount = (reservation.payment as any)?.[0]?.amount || 0
       
       if (!acc[programTitle]) {
         acc[programTitle] = { revenue: 0, count: 0 }

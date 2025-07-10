@@ -378,7 +378,7 @@ export async function getLatestProgramsByCategory(limit = 1) {
     return results.reduce((acc, { category, programs }) => {
       acc[category] = programs
       return acc
-    }, {} as Record<string, typeof programs>)
+    }, {} as Record<string, any>)
   } catch (error) {
     console.error('Error fetching latest programs by category:', error)
     throw new Error('카테고리별 최신 프로그램을 불러오는데 실패했습니다.')

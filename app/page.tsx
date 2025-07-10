@@ -93,12 +93,12 @@ export default function LandingPage() {
                 >
                   지금 시작하기 <ArrowRight size={20} />
                 </a>
-                <Link
+                <a
                   href="/programs"
                   className="border border-purple-400 text-purple-400 px-8 py-3 rounded-full hover:bg-purple-400/10 transition-colors backdrop-blur-sm cursor-pointer"
                 >
                   프로그램 보기
-                </Link>
+                </a>
               </motion.div>
             </motion.div>
           </div>

@@ -11,12 +11,15 @@ import {
   Users, 
   CheckCircle,
   AlertCircle,
-  User
+  User,
+  CreditCard
 } from "lucide-react";
 import Link from "next/link";
+import { loadTossPayments } from "@tosspayments/tosspayments-sdk";
 import { getProgramBySlug } from "@/lib/database/programs-client";
 import { getCurrentUser } from "@/lib/auth";
 import { createReservation } from "@/lib/database/reservations";
+import { confirmTossPayment } from "@/lib/payments/toss";
 import { Database } from "@/types/database";
 
 type Program = Database['public']['Tables']['programs']['Row'] & {
@@ -72,6 +75,15 @@ export default function ProgramBookingPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [step, setStep] = useState(1); // 1: 정보입력, 2: 결제
+  
+  // TossPayments 관련 state
+  const [widgets, setWidgets] = useState<any>(null);
+  const [ready, setReady] = useState(false);
+  const [reservationId, setReservationId] = useState<string | null>(null);
+  const [paymentProcessing, setPaymentProcessing] = useState(false);
+  
+  const clientKey = process.env.NEXT_PUBLIC_TOSSPAYMENT_WIDGET_CLIENT_KEY!;
+  const ANONYMOUS = "ANONYMOUS";
   
   const [form, setForm] = useState<BookingForm>({
     participantName: '',
@@ -178,34 +190,120 @@ export default function ProgramBookingPage() {
       setSubmitting(true);
       setError(null);
 
-      const effectivePrice = getEffectivePrice(program);
-      
-      const reservationData = {
-        program_id: program.id,
-        participant_name: form.participantName,
-        participant_email: form.participantEmail,
-        participant_phone: form.participantPhone,
-        emergency_contact: form.emergencyContact,
-        dietary_restrictions: form.dietaryRestrictions || null,
-        special_requests: form.specialRequests || null,
-        amount_paid: effectivePrice.price
-      };
-
-      const response = await createReservation(reservationData);
-      
-      if (response.error) {
-        setError(response.error);
-        return;
-      }
-
-      // 결제 페이지로 이동 (여기서는 단순화)
-      router.push(`/programs/${slug}/book/payment?reservation=${response.data?.id}`);
+      // 1단계에서 2단계로 진행 (결제 준비)
+      setStep(2);
       
     } catch (error) {
-      console.error('Booking failed:', error);
-      setError('예약 처리 중 오류가 발생했습니다.');
+      console.error('Form submission failed:', error);
+      setError('폼 제출 중 오류가 발생했습니다.');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  // TossPayments 위젯 초기화
+  useEffect(() => {
+    if (step === 2 && program && !widgets) {
+      async function fetchPaymentWidgets() {
+        try {
+          const tossPayments = await loadTossPayments(clientKey);
+          const paymentWidgets = tossPayments.widgets({
+            customerKey: ANONYMOUS,
+          });
+          setWidgets(paymentWidgets);
+        } catch (error) {
+          console.error('TossPayments 위젯 초기화 실패:', error);
+          setError('결제 시스템 초기화에 실패했습니다.');
+        }
+      }
+      fetchPaymentWidgets();
+    }
+  }, [step, program, clientKey]);
+
+  // TossPayments 위젯 렌더링
+  useEffect(() => {
+    if (widgets && program && step === 2) {
+      async function renderPaymentWidgets() {
+        try {
+          if (!program) return;
+          const effectivePrice = getEffectivePrice(program);
+          
+          await widgets.setAmount({
+            currency: "KRW",
+            value: effectivePrice.price,
+          });
+
+          await Promise.all([
+            widgets.renderPaymentMethods({
+              selector: "#payment-method",
+              variantKey: "DEFAULT",
+            }),
+            widgets.renderAgreement({
+              selector: "#agreement",
+              variantKey: "AGREEMENT",
+            }),
+          ]);
+          
+          setReady(true);
+        } catch (error) {
+          console.error('결제 위젯 렌더링 실패:', error);
+          setError('결제 화면 로드에 실패했습니다.');
+        }
+      }
+      renderPaymentWidgets();
+    }
+  }, [widgets, program, step]);
+
+  // 결제 처리
+  const handlePayment = async () => {
+    if (!widgets || !program || !user) return;
+
+    try {
+      setPaymentProcessing(true);
+      setError(null);
+
+      const effectivePrice = getEffectivePrice(program);
+      const orderId = `ORDER_${Date.now()}`;
+      
+      // 결제 요청
+      const response = await widgets.requestPayment({
+        orderId,
+        orderName: program.title,
+        successUrl: `${window.location.origin}/payments/success`,
+        failUrl: `${window.location.origin}/payments/fail`,
+        customerName: form.participantName,
+        customerEmail: form.participantEmail,
+        customerMobilePhone: form.participantPhone,
+      });
+
+      // 결제 성공 시 데이터베이스에 저장
+      if (response) {
+        const reservationData = {
+          program_id: program.id,
+          participant_name: form.participantName,
+          participant_email: form.participantEmail,
+          participant_phone: form.participantPhone,
+          emergency_contact: form.emergencyContact,
+          dietary_restrictions: form.dietaryRestrictions || null,
+          special_requests: form.specialRequests || null,
+          amount_paid: effectivePrice.price
+        };
+
+        const reservationResponse = await createReservation(reservationData);
+        
+        if (reservationResponse.error) {
+          setError(reservationResponse.error);
+          return;
+        }
+
+        // 성공 페이지로 리다이렉트는 TossPayments가 처리
+      }
+      
+    } catch (error) {
+      console.error('결제 처리 실패:', error);
+      setError('결제 처리 중 오류가 발생했습니다.');
+    } finally {
+      setPaymentProcessing(false);
     }
   };
 
@@ -337,7 +435,8 @@ export default function ProgramBookingPage() {
                 </motion.div>
               )}
 
-              <form className="space-y-6" onSubmit={(e) => { e.preventDefault(); handleSubmit(); }}>
+              {step === 1 ? (
+                <form className="space-y-6" onSubmit={(e) => { e.preventDefault(); handleSubmit(); }}>
                 {/* 참가자 정보 */}
                 <motion.div variants={fadeInUp}>
                   <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
@@ -481,10 +580,56 @@ export default function ProgramBookingPage() {
                     disabled={submitting}
                     className="w-full bg-[#56007C] text-white py-3 px-4 rounded-lg hover:bg-[#56007C]/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
                   >
-                    {submitting ? '처리 중...' : '결제하기'}
+                    {submitting ? '처리 중...' : '다음 단계'}
                   </button>
                 </motion.div>
               </form>
+              ) : (
+                /* 2단계: 결제 */
+                <div className="space-y-6">
+                  <motion.div variants={fadeInUp}>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                      <CreditCard size={20} />
+                      결제 정보
+                    </h3>
+                    
+                    <div className="bg-gray-50 p-4 rounded-lg mb-6">
+                      <h4 className="font-medium mb-2">참가자 정보</h4>
+                      <div className="text-sm text-gray-600 space-y-1">
+                        <p><span className="font-medium">이름:</span> {form.participantName}</p>
+                        <p><span className="font-medium">이메일:</span> {form.participantEmail}</p>
+                        <p><span className="font-medium">연락처:</span> {form.participantPhone}</p>
+                      </div>
+                    </div>
+                    
+                    {!ready && (
+                      <div className="text-center py-8">
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#56007C] mx-auto mb-4"></div>
+                        <p className="text-gray-600">결제 UI를 준비하는 중...</p>
+                      </div>
+                    )}
+                    
+                    <div id="payment-method" className={ready ? '' : 'hidden'}></div>
+                    <div id="agreement" className={ready ? '' : 'hidden'}></div>
+                    
+                    <div className="flex gap-4 pt-6">
+                      <button
+                        onClick={() => setStep(1)}
+                        className="flex-1 bg-gray-200 text-gray-700 py-3 px-4 rounded-lg hover:bg-gray-300 transition-colors font-semibold"
+                      >
+                        이전
+                      </button>
+                      <button
+                        onClick={handlePayment}
+                        disabled={!ready || paymentProcessing}
+                        className="flex-1 bg-[#56007C] text-white py-3 px-4 rounded-lg hover:bg-[#56007C]/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
+                      >
+                        {paymentProcessing ? '결제 처리 중...' : '결제하기'}
+                      </button>
+                    </div>
+                  </motion.div>
+                </div>
+              )}
             </motion.div>
           </div>
 

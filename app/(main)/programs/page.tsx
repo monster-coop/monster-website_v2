@@ -7,6 +7,7 @@ import Link from "next/link";
 import { getAllPrograms } from "@/lib/database/programs-client";
 import { Database } from "@/types/database";
 import Header from "@/components/Header";
+import Footer from "@/components/Footer";
 
 type Program = Database['public']['Tables']['programs']['Row'] & {
   program_categories?: {
@@ -341,6 +342,9 @@ export default function ProgramsPage() {
           )}
         </div>
       </section>
+      
+      {/* Footer */}
+      <Footer />
     </div>
   );
 }

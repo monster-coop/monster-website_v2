@@ -11,6 +11,7 @@ import {
 import { useEffect, useState } from "react";
 import { getLatestProgramsByCategory } from "@/lib/database/programs";
 import Header from "@/components/Header";
+import Footer from "@/components/Footer";
 import Link from "next/link";
 
 const fadeInUp = {
@@ -558,99 +559,7 @@ export default function LandingPage() {
         </section>
 
         {/* Footer */}
-        <footer id="contact" className="bg-gray-900 text-white py-12">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="grid md:grid-cols-4 gap-8">
-              <div>
-                <div className="text-2xl font-bold mb-4">몬스터 협동조합</div>
-                <p className="text-gray-400 mb-4">
-                  팀프러너를 양성하는 No.1 교육 기관
-                </p>
-              </div>
-
-              <div>
-                <h3 className="font-semibold mb-4">프로그램</h3>
-                <ul className="space-y-2 text-gray-400">
-                  <li>
-                    <a
-                      href="#programs"
-                      className="hover:text-white transition-colors"
-                    >
-                      팀기업가정신 교육
-                    </a>
-                  </li>
-                  <li>
-                    <a
-                      href="#programs"
-                      className="hover:text-white transition-colors"
-                    >
-                      SQUEEZE LRS
-                    </a>
-                  </li>
-                  <li>
-                    <a
-                      href="#programs"
-                      className="hover:text-white transition-colors"
-                    >
-                      챌린지 트립
-                    </a>
-                  </li>
-                  <li>
-                    <a
-                      href="#programs"
-                      className="hover:text-white transition-colors"
-                    >
-                      작가가 되는 트립
-                    </a>
-                  </li>
-                </ul>
-              </div>
-
-              <div>
-                <h3 className="font-semibold mb-4">서비스</h3>
-                <ul className="space-y-2 text-gray-400">
-                  <li>
-                    <a
-                      href="#subscription"
-                      className="hover:text-white transition-colors"
-                    >
-                      SQUEEZE LMS
-                    </a>
-                  </li>
-                  <li>
-                    <a
-                      href="#subscription"
-                      className="hover:text-white transition-colors"
-                    >
-                      구독 서비스
-                    </a>
-                  </li>
-                  <li>
-                    <a
-                      href="#contact"
-                      className="hover:text-white transition-colors"
-                    >
-                      상담 예약
-                    </a>
-                  </li>
-                </ul>
-              </div>
-
-              <div>
-                <h3 className="font-semibold mb-4">연락처</h3>
-                <div className="space-y-2 text-gray-400">
-                  <p>이메일: info@monster-coop.com</p>
-                  <p>전화: 02-1234-5678</p>
-                  <p>주소: 서울특별시 노원구</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
-              <p>&copy; 2024 몬스터 협동조합. All rights reserved.</p>
-            </div>
-          </div>
-        </footer>
+        <Footer />
       </div>
     </div>
   );

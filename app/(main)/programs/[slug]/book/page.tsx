@@ -21,6 +21,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { createReservation } from "@/lib/database/reservations";
 import { confirmTossPayment } from "@/lib/payments/toss";
 import { Database } from "@/types/database";
+import Footer from "@/components/Footer";
 
 type Program = Database['public']['Tables']['programs']['Row'] & {
   program_categories?: {
@@ -550,9 +551,9 @@ export default function ProgramBookingPage() {
                       />
                       <span className="text-sm text-gray-700">
                         <span className="font-medium">이용약관</span>에 동의합니다. *
-                        <button type="button" className="text-[#56007C] hover:underline ml-1">
+                        <Link href="/privacy#terms" target="_blank" className="text-[#56007C] hover:underline ml-1">
                           전문 보기
-                        </button>
+                        </Link>
                       </span>
                     </label>
                     
@@ -565,9 +566,9 @@ export default function ProgramBookingPage() {
                       />
                       <span className="text-sm text-gray-700">
                         <span className="font-medium">개인정보처리방침</span>에 동의합니다. *
-                        <button type="button" className="text-[#56007C] hover:underline ml-1">
+                        <Link href="/privacy#privacy" target="_blank" className="text-[#56007C] hover:underline ml-1">
                           전문 보기
-                        </button>
+                        </Link>
                       </span>
                     </label>
                   </div>
@@ -702,6 +703,9 @@ export default function ProgramBookingPage() {
           </div>
         </div>
       </div>
+      
+      {/* Footer */}
+      <Footer />
     </div>
   );
 }

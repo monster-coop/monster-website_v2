@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
     const { resultCode, tid, orderId, status, amount, payMethod } = webhookData
 
     if (resultCode === '0000') {
-      const supabase = createClient()
+      const supabase = await createClient()
       
       // Update payment record based on webhook data
       const { error: updateError } = await supabase

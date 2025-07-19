@@ -33,7 +33,7 @@ const formSchema = z.object({
   start_time: z.string().optional(),
   end_time: z.string().optional(),
   location: z.string().optional(),
-  difficulty_level: z.enum(["beginner", "intermediate", "advanced"]).default("beginner"),
+  difficulty_level: z.enum(["beginner", "intermediate", "advanced"]),
   duration_hours: z.number().min(0).optional(),
   instructor_name: z.string().optional(),
   instructor_bio: z.string().optional(),
@@ -41,8 +41,8 @@ const formSchema = z.object({
   thumbnail_url: z.string().url().optional().or(z.literal("")),
   notion_page_id: z.string().optional(),
   tags: z.array(z.string()).optional(),
-  is_featured: z.boolean().default(false),
-  is_active: z.boolean().default(true),
+  is_featured: z.boolean(),
+  is_active: z.boolean(),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -133,7 +133,7 @@ export default function CreateProgramModal({ isOpen, onClose, onSuccess }: Creat
     }
   }, [watchStartTime, watchEndTime, form]);
 
-  const onSubmit = async (data: FormData) => {
+  const onSubmit = async (data: FormData): Promise<void> => {
     if (loading) return;
 
     setLoading(true);
@@ -361,7 +361,7 @@ export default function CreateProgramModal({ isOpen, onClose, onSuccess }: Creat
                       <FormLabel>시작일</FormLabel>
                       <FormControl>
                         <DatePicker
-                          value={field.value}
+                          value={field.value || ""}
                           onChange={field.onChange}
                           placeholder="시작일을 선택하세요"
                           open={startDateOpen}
@@ -381,7 +381,7 @@ export default function CreateProgramModal({ isOpen, onClose, onSuccess }: Creat
                       <FormLabel>종료일</FormLabel>
                       <FormControl>
                         <DatePicker
-                          value={field.value}
+                          value={field.value || ""}
                           onChange={field.onChange}
                           placeholder="종료일을 선택하세요"
                           open={endDateOpen}
@@ -403,7 +403,7 @@ export default function CreateProgramModal({ isOpen, onClose, onSuccess }: Creat
                       <FormLabel>시작 시간</FormLabel>
                       <FormControl>
                         <TimeSelect
-                          value={field.value}
+                          value={field.value || ""}
                           onChange={field.onChange}
                           placeholder="시작 시간"
                         />
@@ -421,7 +421,7 @@ export default function CreateProgramModal({ isOpen, onClose, onSuccess }: Creat
                       <FormLabel>종료 시간</FormLabel>
                       <FormControl>
                         <TimeSelect
-                          value={field.value}
+                          value={field.value || ""}
                           onChange={field.onChange}
                           placeholder="종료 시간"
                         />
@@ -567,7 +567,7 @@ export default function CreateProgramModal({ isOpen, onClose, onSuccess }: Creat
                       <FormLabel>얼리버드 마감일</FormLabel>
                       <FormControl>
                         <DatePicker
-                          value={field.value}
+                          value={field.value || ""}
                           onChange={field.onChange}
                           placeholder="얼리버드 마감일"
                           open={earlyBirdDateOpen}

@@ -115,6 +115,7 @@ export default function ProgramEditPage() {
         category: programData.category?.name || 'Uncategorized',
         instructor: programData.instructor_name || 'TBD',
         status: programData.status || 'open',
+        is_active: programData.is_active || false,
         enrollment: {
           current: programData.current_participants || 0,
           maximum: programData.max_participants || 0,
@@ -144,15 +145,15 @@ export default function ProgramEditPage() {
       };
 
       // Transform participants data
-      const transformedParticipants: ProgramParticipant[] = participantsData.map(p => ({
+      const transformedParticipants = participantsData.map(p => ({
         id: p.id,
         name: p.participant_name,
         email: p.participant_email,
         phone: p.participant_phone || '',
-        enrollment_date: p.created_at,
-        payment_status: p.payment_status,
-        attendance_status: p.attendance_status,
-        completion_status: p.status,
+        enrollment_date: p.created_at || '',
+        payment_status: p.payment_status || '',
+        attendance_status: p.attendance_status || '',
+        completion_status: p.status || '',
         satisfaction_rating: undefined,
         feedback: undefined
       }));
@@ -172,7 +173,7 @@ export default function ProgramEditPage() {
         start_time: programData.start_time || "",
         end_time: programData.end_time || "",
         location: programData.location || "",
-        difficulty_level: programData.difficulty_level || "beginner",
+        difficulty_level: (programData.difficulty_level as "beginner" | "intermediate" | "advanced") || "beginner",
         duration_hours: programData.duration_hours || 0,
         instructor_name: programData.instructor_name || "",
         instructor_bio: programData.instructor_bio || "",
@@ -182,7 +183,7 @@ export default function ProgramEditPage() {
         tags: programData.tags || [],
         is_featured: programData.is_featured || false,
         is_active: programData.is_active || true,
-        status: programData.status || "open"
+        status: (programData.status as "completed" | "cancelled" | "full" | "open") || "open"
       });
 
       setProgram(transformedProgram);

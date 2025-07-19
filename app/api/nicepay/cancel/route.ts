@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    const supabase = createClient()
+    const supabase = await createClient()
     
     // Get payment record
     const { data: payment, error: paymentError } = await supabase
@@ -81,18 +81,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to update payment record' }, { status: 500 })
     }
 
-    // Update participant status
-    const { error: participantError } = await supabase
-      .from('program_participants')
-      .update({
-        status: 'cancelled',
-        payment_status: 'cancelled'
-      })
-      .eq('id', payment.participant_id)
+    // Update participant status if participant_id exists
+    if (payment.participant_id) {
+      const { error: participantError } = await supabase
+        .from('program_participants')
+        .update({
+          status: 'cancelled',
+          payment_status: 'cancelled'
+        })
+        .eq('id', payment.participant_id)
 
-    if (participantError) {
-      console.error('Failed to update participant status:', participantError)
-      // Don't fail the cancellation, just log the error
+      if (participantError) {
+        console.error('Failed to update participant status:', participantError)
+        // Don't fail the cancellation, just log the error
+      }
     }
 
     // Create refund record

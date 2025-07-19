@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { CheckCircle, Calendar, CreditCard, Download, ArrowRight } from 'lucide-react'
@@ -15,7 +15,7 @@ interface PaymentInfo {
   participantName?: string
 }
 
-export default function PaymentSuccessPage() {
+function PaymentSuccessContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const [paymentInfo, setPaymentInfo] = useState<PaymentInfo | null>(null)
@@ -205,5 +205,13 @@ export default function PaymentSuccessPage() {
       
       <Footer />
     </div>
+  )
+}
+
+export default function PaymentSuccessPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Loading...</div>}>
+      <PaymentSuccessContent />
+    </Suspense>
   )
 }

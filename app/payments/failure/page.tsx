@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { XCircle, AlertCircle, ArrowLeft, RefreshCw } from 'lucide-react'
@@ -13,7 +13,7 @@ interface FailureInfo {
   amount?: string
 }
 
-export default function PaymentFailurePage() {
+function PaymentFailureContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const [failureInfo, setFailureInfo] = useState<FailureInfo | null>(null)
@@ -214,5 +214,13 @@ export default function PaymentFailurePage() {
       
       <Footer />
     </div>
+  )
+}
+
+export default function PaymentFailurePage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Loading...</div>}>
+      <PaymentFailureContent />
+    </Suspense>
   )
 }

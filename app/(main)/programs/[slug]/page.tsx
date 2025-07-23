@@ -39,6 +39,13 @@ type Program = Database['public']['Tables']['programs']['Row'] & {
       full_name: string | null;
     };
   }>;
+  program_photos?: Array<{
+    photo_type: string;
+    photo: {
+      storage_url: string;
+      filename: string;
+    };
+  }>;
 };
 
 const fadeInUp = {
@@ -86,7 +93,7 @@ export default function ProgramDetailPage() {
       setLoading(true);
       const response = await getProgramBySlug(slug);
       if (response.data) {
-        setProgram(response.data);
+        setProgram(response.data as unknown as Program);
       } else {
         router.push('/404');
       }
@@ -446,24 +453,51 @@ export default function ProgramDetailPage() {
             transition={{ duration: 0.3 }}
           >
             {selectedTab === 'overview' && (
-              <div className="prose prose-lg max-w-4xl">
-                <h3>프로그램 상세 정보</h3>
-                <p>{program.description}</p>
-                
-                <h4>일정 및 시간</h4>
-                <ul>
-                  <li>시작일: {formatDate(program.start_date!)}</li>
-                  <li>종료일: {formatDate(program.end_date!)}</li>
-                  <li>시간: {formatTime(program.start_time!)} - {formatTime(program.end_time!)}</li>
-                  <li>총 교육시간: {program.duration_hours}시간</li>
-                </ul>
+              <div className="space-y-8">
+                {/* Image Gallery */}
+                {program.program_photos && program.program_photos.length > 0 && (
+                  <div className="space-y-4">
+                    <h3 className="text-2xl font-bold text-gray-900">프로그램 이미지</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {program.program_photos.map((programPhoto, index) => (
+                        <div key={index} className="relative group">
+                          <img
+                            src={programPhoto.photo.storage_url}
+                            alt={programPhoto.photo.filename}
+                            className="w-full h-48 object-cover rounded-lg border border-gray-200 hover:shadow-lg transition-shadow"
+                          />
+                          {programPhoto.photo_type === 'thumbnail' && (
+                            <div className="absolute top-2 left-2 bg-blue-500 text-white px-2 py-1 rounded text-xs font-medium flex items-center gap-1">
+                              <Star size={12} />
+                              썸네일
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
-                <h4>참가 대상</h4>
-                <ul>
-                  <li>난이도: {getDifficultyLabel(program.difficulty_level || '')}</li>
-                  <li>최대 참가인원: {program.max_participants}명</li>
-                  <li>최소 참가인원: {program.min_participants}명</li>
-                </ul>
+                {/* Program Details */}
+                <div className="prose prose-lg max-w-4xl">
+                  <h3>프로그램 상세 정보</h3>
+                  <p>{program.description}</p>
+                  
+                  <h4>일정 및 시간</h4>
+                  <ul>
+                    <li>시작일: {formatDate(program.start_date!)}</li>
+                    <li>종료일: {formatDate(program.end_date!)}</li>
+                    <li>시간: {formatTime(program.start_time!)} - {formatTime(program.end_time!)}</li>
+                    <li>총 교육시간: {program.duration_hours}시간</li>
+                  </ul>
+
+                  <h4>참가 대상</h4>
+                  <ul>
+                    <li>난이도: {getDifficultyLabel(program.difficulty_level || '')}</li>
+                    <li>최대 참가인원: {program.max_participants}명</li>
+                    <li>최소 참가인원: {program.min_participants}명</li>
+                  </ul>
+                </div>
               </div>
             )}
 

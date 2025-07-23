@@ -46,7 +46,8 @@ CREATE TABLE programs (
     title TEXT NOT NULL,
     slug TEXT UNIQUE NOT NULL,
     description TEXT,
-    thumbnail_url TEXT,
+    -- thumbnail_url removed, using photos table reference instead
+    thumbnail UUID REFERENCES photos(id), -- 썸네일 이미지 참조
     notion_page_id TEXT, -- Notion CMS 연동
     instructor_name TEXT,
     instructor_bio TEXT,
@@ -100,8 +101,8 @@ CREATE TABLE program_participants (
     payment_status TEXT DEFAULT 'pending' CHECK (payment_status IN ('pending', 'paid', 'refunded', 'failed')),
     attendance_status TEXT DEFAULT 'registered' CHECK (attendance_status IN ('registered', 'attended', 'absent')),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    UNIQUE(user_id, program_id) -- 한 프로그램에 한 번만 신청 가능
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    -- UNIQUE 제약조건 제거: 사용자가 같은 프로그램에 여러 번 신청 가능 (예: 취소 후 재신청, 동반자 추가 등)
 );
 
 -- ================================
@@ -163,15 +164,19 @@ CREATE TABLE payments (
     user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
     participant_id UUID REFERENCES program_participants(id) ON DELETE SET NULL, -- 프로그램 결제
     subscription_id UUID REFERENCES user_subscriptions(id) ON DELETE SET NULL, -- 구독 결제
-    payment_key TEXT UNIQUE, -- TossPayments 결제키
+    payment_key TEXT UNIQUE, -- TossPayments/NicePay 결제키 (TID)
     order_id TEXT UNIQUE NOT NULL,
     amount DECIMAL(10,2) NOT NULL,
     currency TEXT DEFAULT 'KRW',
     payment_method TEXT, -- 카드, 계좌이체, 간편결제 등
     status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'completed', 'failed', 'cancelled', 'refunded')),
     toss_payment_data JSONB, -- TossPayments API 응답 데이터
+    nicepay_data JSONB, -- NicePay API 응답 데이터
     paid_at TIMESTAMP WITH TIME ZONE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    cancelled_at TIMESTAMP WITH TIME ZONE, -- 결제 취소 시점 (환불 처리 시 업데이트)
+    failed_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 -- 환불 내역
@@ -184,8 +189,11 @@ CREATE TABLE refunds (
     status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected', 'completed')),
     processed_by UUID REFERENCES profiles(id),
     processed_at TIMESTAMP WITH TIME ZONE,
-    toss_refund_data JSONB,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    refund_tid TEXT, -- NicePay 취소 거래 키
+    toss_refund_data JSONB, -- TossPayments 환불 API 응답
+    nicepay_refund_data JSONB, -- NicePay 환불 API 응답 (취소 API 전체 응답 데이터)
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 -- ================================
@@ -240,7 +248,26 @@ CREATE TABLE site_settings (
 );
 
 -- ================================
--- 10. 인덱스 및 제약조건
+-- 10. 사진 관리 (Photos)
+-- ================================
+
+-- 사진 저장 및 관리
+CREATE TABLE photos (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    filename TEXT NOT NULL,
+    storage_url TEXT NOT NULL,
+    width INTEGER,
+    height INTEGER,
+    size_kb INTEGER,
+    uploaded_by UUID REFERENCES auth.users(id),
+    program_id UUID REFERENCES programs(id) ON DELETE SET NULL, -- 프로그램과 연결
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    is_active BOOLEAN DEFAULT true
+);
+
+-- ================================
+-- 11. 인덱스 및 제약조건
 -- ================================
 
 -- 성능 최적화를 위한 인덱스
@@ -258,6 +285,8 @@ CREATE INDEX idx_payments_user ON payments(user_id);
 CREATE INDEX idx_payments_status ON payments(status);
 CREATE INDEX idx_inquiries_status ON inquiries(status);
 CREATE INDEX idx_notifications_user_unread ON notifications(user_id, is_read);
+CREATE INDEX idx_photos_program ON photos(program_id);
+CREATE INDEX idx_photos_uploaded_by ON photos(uploaded_by);
 
 -- 업데이트 시간 자동 갱신을 위한 트리거
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -272,7 +301,10 @@ CREATE TRIGGER update_profiles_updated_at BEFORE UPDATE ON profiles FOR EACH ROW
 CREATE TRIGGER update_programs_updated_at BEFORE UPDATE ON programs FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_participants_updated_at BEFORE UPDATE ON program_participants FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_subscriptions_updated_at BEFORE UPDATE ON user_subscriptions FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_payments_updated_at BEFORE UPDATE ON payments FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_refunds_updated_at BEFORE UPDATE ON refunds FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_inquiries_updated_at BEFORE UPDATE ON inquiries FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_photos_updated_at BEFORE UPDATE ON photos FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ================================
 -- 11. Row Level Security (RLS) 정책
@@ -286,6 +318,7 @@ ALTER TABLE user_subscriptions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE payments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE inquiries ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE photos ENABLE ROW LEVEL SECURITY;
 
 -- 프로필 접근 정책
 CREATE POLICY "Users can view own profile" ON profiles FOR SELECT USING (auth.uid() = id);
@@ -325,6 +358,13 @@ CREATE POLICY "Admins can manage all inquiries" ON inquiries FOR ALL USING (
 
 -- 알림 접근 정책
 CREATE POLICY "Users can manage own notifications" ON notifications FOR ALL USING (auth.uid() = user_id);
+
+-- 사진 접근 정책
+CREATE POLICY "Users can view active photos" ON photos FOR SELECT USING (is_active = true);
+CREATE POLICY "Users can manage own photos" ON photos FOR ALL USING (auth.uid() = uploaded_by);
+CREATE POLICY "Admins can manage all photos" ON photos FOR ALL USING (
+    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND is_admin = true)
+);
 
 -- ================================
 -- 12. 트리거 함수 (참가자 수 자동 업데이트)

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { cancelPayment } from '@/lib/payments/nicepay'
 import { createClient } from '@/lib/supabase/server'
-import { getCurrentUser } from '@/lib/auth'
+import { getCurrentUser } from '@/lib/auth/actions'
 
 /**
  * Handle payment cancellation request

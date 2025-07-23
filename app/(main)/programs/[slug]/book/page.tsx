@@ -12,7 +12,10 @@ import {
   CheckCircle,
   AlertCircle,
   User,
-  CreditCard
+  CreditCard,
+  Smartphone,
+  Building2,
+  Banknote
 } from "lucide-react";
 import Link from "next/link";
 import { getProgramBySlug } from "@/lib/database/programs-client";
@@ -58,6 +61,15 @@ interface BookingForm {
   agreedToPrivacy: boolean;
 }
 
+type PaymentMethod = 'card' | 'bank' | 'naverpayCard' | 'kakaopay';
+
+interface PaymentMethodOption {
+  id: PaymentMethod;
+  name: string;
+  description: string;
+  icon: React.ComponentType<{ size?: number; className?: string }>;
+}
+
 const fadeInUp = {
   initial: { opacity: 0, y: 60 },
   animate: { opacity: 1, y: 0 },
@@ -84,6 +96,7 @@ export default function ProgramBookingPage() {
   // NicePay 관련 state
   const [paymentProcessing, setPaymentProcessing] = useState(false);
   const [sdkLoaded, setSdkLoaded] = useState(false);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod>('card');
   
   // NicePay 설정을 안전하게 가져오기
   const { config: nicePayConfig, loading: configLoading, error: configError } = useNicePayConfig();
@@ -108,6 +121,34 @@ export default function ProgramBookingPage() {
   });
 
   const slug = params?.slug as string;
+
+  // 결제 방법 옵션
+  const paymentMethods: PaymentMethodOption[] = [
+    {
+      id: 'card',
+      name: '신용/체크카드',
+      description: '국내외 모든 카드 결제',
+      icon: CreditCard
+    },
+    {
+      id: 'bank',
+      name: '계좌이체',
+      description: '실시간 계좌이체 결제',
+      icon: Building2
+    },
+    {
+      id: 'naverpayCard',
+      name: '네이버페이',
+      description: '네이버페이 카드 결제',
+      icon: Smartphone
+    },
+    {
+      id: 'kakaopay',
+      name: '카카오페이',
+      description: '카카오페이 간편결제',
+      icon: Banknote
+    }
+  ];
 
   useEffect(() => {
     if (slug) {
@@ -222,7 +263,7 @@ export default function ProgramBookingPage() {
         
         AUTHNICE.requestPay({
           clientId: nicePayConfig.clientId,
-          method: 'card',
+          method: selectedPaymentMethod,
           orderId: orderId,
           amount: effectivePrice.price,
           goodsName: program.title,
@@ -506,6 +547,61 @@ export default function ProgramBookingPage() {
                         </Link>
                       </span>
                     </label>
+                  </div>
+                </motion.div>
+
+                {/* 결제 방법 선택 */}
+                <motion.div variants={fadeInUp}>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                    <CreditCard size={20} />
+                    결제 방법 선택
+                  </h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {paymentMethods.map((method) => {
+                      const IconComponent = method.icon;
+                      return (
+                        <button
+                          key={method.id}
+                          type="button"
+                          onClick={() => setSelectedPaymentMethod(method.id)}
+                          className={`p-4 border-2 rounded-lg text-left transition-all ${
+                            selectedPaymentMethod === method.id
+                              ? 'border-[#56007C] bg-[#56007C]/5 shadow-md'
+                              : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className={`p-2 rounded-lg ${
+                              selectedPaymentMethod === method.id
+                                ? 'bg-[#56007C] text-white'
+                                : 'bg-gray-100 text-gray-600'
+                            }`}>
+                              <IconComponent size={20} />
+                            </div>
+                            <div>
+                              <div className={`font-medium ${
+                                selectedPaymentMethod === method.id
+                                  ? 'text-[#56007C]'
+                                  : 'text-gray-900'
+                              }`}>
+                                {method.name}
+                              </div>
+                              <div className="text-sm text-gray-500">
+                                {method.description}
+                              </div>
+                            </div>
+                            {selectedPaymentMethod === method.id && (
+                              <div className="ml-auto">
+                                <div className="w-5 h-5 bg-[#56007C] rounded-full flex items-center justify-center">
+                                  <div className="w-2 h-2 bg-white rounded-full"></div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </button>
+                      );
+                    })}
                   </div>
                 </motion.div>
 

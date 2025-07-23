@@ -18,12 +18,23 @@ import {
   CheckCircle,
   XCircle,
   AlertCircle,
-  CreditCard
+  CreditCard,
+  CalendarIcon,
+  Trash2,
+  Star
 } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import { updateProgram, UpdateProgramData } from "@/lib/database/programs-server";
+import { updateProgram, UpdateProgramData, createProgram } from "@/lib/database/programs-server";
 import { AdminProgramDetails } from "@/lib/types/admin";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { format } from "date-fns";
+import { ko } from "date-fns/locale";
+import { ProgramImageManager } from "@/components/admin/ProgramImageManager";
+import { toast } from "sonner";
 
 interface ProgramParticipant {
   id: string;
@@ -42,12 +53,16 @@ export default function ProgramEditPage() {
   const router = useRouter();
   const params = useParams();
   const programId = params.id as string;
+  const isCreateMode = programId === 'new';
   
   const [program, setProgram] = useState<AdminProgramDetails | null>(null);
   const [participants, setParticipants] = useState<ProgramParticipant[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<'details' | 'participants'>('details');
+  const [uploadedPhotos, setUploadedPhotos] = useState<any[]>([]);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [selectedThumbnailId, setSelectedThumbnailId] = useState<string | null>(null);
   
   const [formData, setFormData] = useState<UpdateProgramData>({
     id: programId,
@@ -68,7 +83,7 @@ export default function ProgramEditPage() {
     instructor_name: "",
     instructor_bio: "",
     instructor_image_url: "",
-    thumbnail_url: "",
+    thumbnail: "",
     notion_page_id: "",
     tags: [],
     is_featured: false,
@@ -77,8 +92,24 @@ export default function ProgramEditPage() {
   });
 
   useEffect(() => {
-    loadProgramData();
-  }, [programId]);
+    const getCurrentUser = async () => {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      setCurrentUserId(user?.id || null);
+    };
+
+    getCurrentUser();
+
+    if (!isCreateMode) {
+      loadProgramData();
+    } else {
+      setLoading(false);
+      // In create mode, start with empty photos array
+      setUploadedPhotos([]);
+    }
+  }, [programId, isCreateMode]);
+
+  // No longer needed - create mode starts with empty photos
 
   const loadProgramData = async () => {
     try {
@@ -178,7 +209,7 @@ export default function ProgramEditPage() {
         instructor_name: programData.instructor_name || "",
         instructor_bio: programData.instructor_bio || "",
         instructor_image_url: programData.instructor_image_url || "",
-        thumbnail_url: programData.thumbnail_url || "",
+        thumbnail: programData.thumbnail || undefined,
         notion_page_id: programData.notion_page_id || "",
         tags: programData.tags || [],
         is_featured: programData.is_featured || false,
@@ -188,6 +219,11 @@ export default function ProgramEditPage() {
 
       setProgram(transformedProgram);
       setParticipants(transformedParticipants);
+      
+      // Load existing photos for edit mode
+      if (!isCreateMode) {
+        await loadProgramPhotos();
+      }
     } catch (error) {
       console.error('Error loading program data:', error);
       alert('프로그램 데이터를 불러오는데 실패했습니다.');
@@ -195,6 +231,109 @@ export default function ProgramEditPage() {
       setLoading(false);
     }
   };
+
+  const loadProgramPhotos = async () => {
+    try {
+      const supabase = createClient();
+      
+      // Get program's thumbnail info first
+      const { data: programData, error: programError } = await supabase
+        .from('programs')
+        .select('thumbnail')
+        .eq('id', programId)
+        .single();
+
+      if (programError) {
+        console.error('Error loading program data:', programError);
+        return;
+      }
+
+      const { data: photos, error } = await supabase
+        .from('photos')
+        .select('*')
+        .eq('program_id', programId)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error loading program photos:', error);
+        return;
+      }
+
+      // Transform to match expected interface with correct thumbnail detection
+      const transformedPhotos = photos?.map((photo) => ({
+        id: photo.id,
+        photo_type: photo.id === programData?.thumbnail ? 'thumbnail' : 'gallery',
+        photo: photo
+      })) || [];
+
+      console.log('Loaded program photos:', transformedPhotos); // 디버깅용
+      setUploadedPhotos(transformedPhotos);
+    } catch (error) {
+      console.error('Error loading program photos:', error);
+    }
+  };
+
+  const handlePhotosChange = async () => {
+    // Reload photos after changes
+    if (!isCreateMode) {
+      await loadProgramPhotos();
+    } else {
+      // In create mode, load photos that don't have a program_id yet
+      await loadUnlinkedUserPhotos();
+    }
+  };
+
+  const loadUnlinkedUserPhotos = async () => {
+    if (!currentUserId) return;
+    
+    try {
+      const supabase = createClient();
+      const { data: photos, error } = await supabase
+        .from('photos')
+        .select('*')
+        .eq('uploaded_by', currentUserId)
+        .is('program_id', null) // Only photos not linked to any program
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error loading unlinked photos:', error);
+        return;
+      }
+
+      // Transform to match expected interface
+      const transformedPhotos = photos?.map((photo) => ({
+        id: photo.id,
+        photo_type: selectedThumbnailId === photo.id ? 'thumbnail' : 'gallery',
+        photo: photo
+      })) || [];
+
+      setUploadedPhotos(transformedPhotos);
+    } catch (error) {
+      console.error('Error loading unlinked photos:', error);
+    }
+  };
+
+
+  const linkPhotosToProgram = async (programId: string, photoIds: string[]) => {
+    try {
+      const supabase = createClient();
+      
+      // Update photos to link them to the program
+      const { error } = await supabase
+        .from('photos')
+        .update({ program_id: programId })
+        .in('id', photoIds);
+
+      if (error) {
+        console.error('Error linking photos to program:', error);
+        throw error;
+      }
+    } catch (error) {
+      console.error('Error linking photos to program:', error);
+      throw error;
+    }
+  };
+
 
   const handleInputChange = (field: keyof UpdateProgramData, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -205,21 +344,126 @@ export default function ProgramEditPage() {
     setFormData(prev => ({ ...prev, tags }));
   };
 
+  const generateSlug = (title: string): string => {
+    return title
+      .toLowerCase()
+      .replace(/[^a-z0-9가-힣\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
+      .trim();
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (saving) return;
 
     setSaving(true);
     try {
-      await updateProgram(formData);
-      alert('프로그램이 성공적으로 업데이트되었습니다.');
+      console.log('Submitting form data:', formData); // 디버깅
+      
+      if (isCreateMode) {
+        if (!formData.title || !formData.base_price) {
+          alert('제목과 기본 가격은 필수 입력 항목입니다.');
+          return;
+        }
+        
+        const { id, status, ...createData } = formData;
+        // 슬러그 자동 생성
+        const slug = generateSlug(formData.title);
+        
+        // CreateProgramData 타입에 맞게 변환
+        const programData = {
+          ...createData,
+          slug,
+          title: formData.title,
+          base_price: formData.base_price
+        };
+        
+        const createdProgram = await createProgram(programData);
+        
+        // Link uploaded photos to the new program
+        if (uploadedPhotos.length > 0) {
+          const photoIds = uploadedPhotos.map(photo => photo.photo?.id || photo.id).filter(Boolean);
+          if (photoIds.length > 0) {
+            await linkPhotosToProgram(createdProgram.id, photoIds);
+            
+            // Set the selected thumbnail or first photo as thumbnail in programs table
+            const thumbnailPhotoId = selectedThumbnailId || photoIds[0];
+            const supabase = createClient();
+            const { error: thumbnailError } = await supabase
+              .from('programs')
+              .update({ thumbnail: thumbnailPhotoId })
+              .eq('id', createdProgram.id);
+
+            if (thumbnailError) {
+              console.error('Error setting program thumbnail:', thumbnailError);
+            }
+          }
+        }
+        
+        alert('프로그램이 성공적으로 생성되었습니다.');
+      } else {
+        // Edit mode - clean form data before submission
+        const cleanedFormData = {
+          ...formData,
+          thumbnail: formData.thumbnail || undefined // 빈 문자열을 undefined로 변환
+        };
+        
+        console.log('Cleaned form data for update:', cleanedFormData); // 디버깅
+        await updateProgram(cleanedFormData);
+        alert('프로그램이 성공적으로 업데이트되었습니다.');
+      }
       router.push('/admin/programs');
     } catch (error) {
-      console.error('Error updating program:', error);
-      alert('프로그램 업데이트에 실패했습니다. 다시 시도해주세요.');
+      console.error(`Error ${isCreateMode ? 'creating' : 'updating'} program:`, error);
+      alert(`프로그램 ${isCreateMode ? '생성' : '업데이트'}에 실패했습니다. 다시 시도해주세요.`);
     } finally {
       setSaving(false);
     }
+  };
+
+  const DatePicker = ({ value, onChange, label }: { value: string | undefined; onChange: (date: string) => void; label: string }) => {
+    const [open, setOpen] = useState(false);
+    const selectedDate = value ? new Date(value) : undefined;
+
+    return (
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          {label}
+        </label>
+        <Popover open={open} onOpenChange={setOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              className={cn(
+                "w-full justify-start text-left font-normal p-3 h-auto border-gray-300 hover:bg-gray-50",
+                !value && "text-muted-foreground"
+              )}
+            >
+              <CalendarIcon className="mr-2 h-4 w-4" />
+              {selectedDate ? (
+                format(selectedDate, "PPP", { locale: ko })
+              ) : (
+                <span>날짜를 선택하세요</span>
+              )}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <CalendarComponent
+              mode="single"
+              selected={selectedDate}
+              onSelect={(date) => {
+                if (date) {
+                  onChange(format(date, "yyyy-MM-dd"));
+                }
+                setOpen(false);
+              }}
+              initialFocus
+            />
+          </PopoverContent>
+        </Popover>
+      </div>
+    );
   };
 
   const getStatusBadge = (status: string) => {
@@ -289,8 +533,12 @@ export default function ProgramEditPage() {
             <ArrowLeft size={20} />
           </Link>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">프로그램 관리</h1>
-            <p className="text-gray-600">{program?.title}</p>
+            <h1 className="text-2xl font-bold text-gray-900">
+              {isCreateMode ? '새 프로그램 생성' : '프로그램 관리'}
+            </h1>
+            <p className="text-gray-600">
+              {isCreateMode ? '새로운 프로그램을 생성합니다' : program?.title}
+            </p>
           </div>
         </div>
       </div>
@@ -308,16 +556,18 @@ export default function ProgramEditPage() {
           >
             프로그램 상세
           </button>
-          <button
-            onClick={() => setActiveTab('participants')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'participants'
-                ? 'border-[#56007C] text-[#56007C]'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            참가자 관리 ({participants.length})
-          </button>
+          {!isCreateMode && (
+            <button
+              onClick={() => setActiveTab('participants')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'participants'
+                  ? 'border-[#56007C] text-[#56007C]'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              참가자 관리 ({participants.length})
+            </button>
+          )}
         </nav>
       </div>
 
@@ -385,29 +635,17 @@ export default function ProgramEditPage() {
               </h3>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    시작일
-                  </label>
-                  <input
-                    type="date"
-                    value={formData.start_date}
-                    onChange={(e) => handleInputChange('start_date', e.target.value)}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#56007C] focus:border-transparent"
-                  />
-                </div>
+                <DatePicker
+                  value={formData.start_date}
+                  onChange={(date) => handleInputChange('start_date', date)}
+                  label="시작일"
+                />
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    종료일
-                  </label>
-                  <input
-                    type="date"
-                    value={formData.end_date}
-                    onChange={(e) => handleInputChange('end_date', e.target.value)}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#56007C] focus:border-transparent"
-                  />
-                </div>
+                <DatePicker
+                  value={formData.end_date}
+                  onChange={(date) => handleInputChange('end_date', date)}
+                  label="종료일"
+                />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -525,17 +763,11 @@ export default function ProgramEditPage() {
                   />
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    얼리버드 마감일
-                  </label>
-                  <input
-                    type="date"
-                    value={formData.early_bird_deadline}
-                    onChange={(e) => handleInputChange('early_bird_deadline', e.target.value)}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#56007C] focus:border-transparent"
-                  />
-                </div>
+                <DatePicker
+                  value={formData.early_bird_deadline}
+                  onChange={(date) => handleInputChange('early_bird_deadline', date)}
+                  label="얼리버드 마감일"
+                />
               </div>
             </div>
 
@@ -589,13 +821,15 @@ export default function ProgramEditPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    썸네일 이미지 URL
+                    썸네일 이미지 ID (자동 설정)
                   </label>
                   <input
-                    type="url"
-                    value={formData.thumbnail_url}
-                    onChange={(e) => handleInputChange('thumbnail_url', e.target.value)}
+                    type="text"
+                    value={formData.thumbnail || ''}
+                    onChange={(e) => handleInputChange('thumbnail', e.target.value)}
                     className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#56007C] focus:border-transparent"
+                    placeholder="이미지 업로드 후 자동 설정됩니다"
+                    readOnly
                   />
                 </div>
 
@@ -647,6 +881,27 @@ export default function ProgramEditPage() {
               </div>
             </div>
 
+            {/* 이미지 관리 */}
+            {currentUserId && (
+              <ProgramImageManager
+                userId={currentUserId}
+                programId={isCreateMode ? undefined : programId}
+                photos={uploadedPhotos}
+                onPhotosChange={handlePhotosChange}
+                onSetThumbnail={(photoId) => {
+                  console.log('Setting thumbnail ID:', photoId);
+                  setSelectedThumbnailId(photoId);
+                  
+                  // In edit mode, immediately update the program thumbnail
+                  if (!isCreateMode && programId) {
+                    setFormData(prev => ({ ...prev, thumbnail: photoId }));
+                  }
+                  handlePhotosChange(); // Reload to update UI
+                }}
+                isCreateMode={isCreateMode}
+              />
+            )}
+
             {/* 버튼 */}
             <div className="flex justify-end gap-3 pt-4 border-t">
               <Link
@@ -661,7 +916,7 @@ export default function ProgramEditPage() {
                 className="flex items-center gap-2 px-6 py-2 bg-[#56007C] text-white rounded-lg hover:bg-[#56007C]/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 <Save size={16} />
-                {saving ? '저장 중...' : '저장'}
+                {saving ? (isCreateMode ? '생성 중...' : '저장 중...') : (isCreateMode ? '생성' : '저장')}
               </button>
             </div>
           </form>

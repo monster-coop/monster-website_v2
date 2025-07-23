@@ -22,7 +22,6 @@ import Link from "next/link";
 import { getAdminPrograms } from "@/lib/database/admin";
 import { AdminProgramDetails, AdminProgramFilters } from "@/lib/types/admin";
 import { toggleProgramActive, deleteProgram } from "@/lib/database/programs-server";
-import CreateProgramModal from "./CreateProgramModal";
 
 const fadeInUp = {
   initial: { opacity: 0, y: 60 },
@@ -36,7 +35,6 @@ export default function AdminProgramsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filters, setFilters] = useState<AdminProgramFilters>({});
   const [selectedPrograms, setSelectedPrograms] = useState<string[]>([]);
-  const [showCreateModal, setShowCreateModal] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   useEffect(() => {
@@ -158,9 +156,6 @@ export default function AdminProgramsPage() {
     }
   };
 
-  const handleCreateSuccess = () => {
-    loadPrograms();
-  };
 
   if (loading) {
     return (
@@ -182,13 +177,13 @@ export default function AdminProgramsPage() {
           <p className="text-gray-600">총 {programs.length}개의 프로그램이 등록되어 있습니다</p>
         </div>
         <div className="flex gap-3">
-          <button
-            onClick={() => setShowCreateModal(true)}
+          <Link
+            href="/admin/programs/new/edit"
             className="flex items-center gap-2 px-4 py-2 bg-[#56007C] text-white rounded-lg hover:bg-[#56007C]/90 transition-colors"
           >
             <Plus size={16} />
             새 프로그램
-          </button>
+          </Link>
         </div>
       </div>
 
@@ -443,21 +438,16 @@ export default function AdminProgramsPage() {
           <BookOpen className="mx-auto h-12 w-12 text-gray-400 mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">프로그램이 없습니다</h3>
           <p className="text-gray-500 mb-4">첫 번째 프로그램을 만들어보세요.</p>
-          <button
-            onClick={() => setShowCreateModal(true)}
+          <Link
+            href="/admin/programs/new/edit"
             className="inline-flex items-center gap-2 px-4 py-2 bg-[#56007C] text-white rounded-lg hover:bg-[#56007C]/90 transition-colors"
           >
             <Plus size={16} />
             새 프로그램 만들기
-          </button>
+          </Link>
         </div>
       )}
 
-      <CreateProgramModal 
-        isOpen={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
-        onSuccess={handleCreateSuccess}
-      />
     </div>
   );
 }

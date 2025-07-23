@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { 
   CreditCard, 
@@ -29,6 +30,19 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 type Payment = Database['public']['Tables']['payments']['Row'] & {
   program_participants?: {
@@ -72,6 +86,11 @@ export default function PaymentsPage() {
   const [loading, setLoading] = useState(true);
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [nicePayData, setNicePayData] = useState<any>(null);
+  const [isLoadingDetail, setIsLoadingDetail] = useState(false);
 
   useEffect(() => {
     loadPaymentData();
@@ -90,7 +109,7 @@ export default function PaymentsPage() {
 
       const supabase = createClient();
 
-      // 결제 내역 가져오기
+      // 결제 내역 가져오기 (프로그램 시작일 정보 포함)
       const { data: paymentsData } = await supabase
         .from('payments')
         .select(`
@@ -98,7 +117,8 @@ export default function PaymentsPage() {
           program_participants!inner(
             programs!inner(
               *,
-              program_categories(*)
+              program_categories(*),
+              start_date
             )
           )
         `)
@@ -147,7 +167,7 @@ export default function PaymentsPage() {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'paid':
+      case 'completed':
         return (
           <Badge variant="default" className="bg-green-100 text-green-800 hover:bg-green-200">
             <CheckCircle size={12} className="mr-1" />
@@ -200,9 +220,147 @@ export default function PaymentsPage() {
     }
   };
 
-  const handlePaymentClick = (payment: Payment) => {
+  const handlePaymentClick = async (payment: Payment) => {
     setSelectedPayment(payment);
     setIsDetailModalOpen(true);
+    setNicePayData(null);
+    
+    // NicePay 실시간 정보 조회
+    if (payment.payment_key) {
+      setIsLoadingDetail(true);
+      try {
+        const response = await fetch(`/api/payments/${payment.id}`);
+        const result = await response.json();
+        
+        if (response.ok && result.nicePayData) {
+          setNicePayData(result.nicePayData);
+          
+          // 결제 상태가 업데이트되었다면 목록 새로고침
+          if (result.payment && result.payment.status !== payment.status) {
+            loadPaymentData();
+          }
+        }
+      } catch (error) {
+        console.error('상세 정보 조회 오류:', error);
+        toast.error('상세 정보를 불러오는 중 오류가 발생했습니다.');
+      } finally {
+        setIsLoadingDetail(false);
+      }
+    }
+  };
+
+  const handleCancelRequest = async () => {
+    if (!selectedPayment || !cancelReason.trim()) {
+      toast.error("취소 사유를 입력해주세요.");
+      return;
+    }
+
+    setIsCancelling(true);
+    try {
+      const response = await fetch('/api/payments/cancel', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          paymentId: selectedPayment.id,
+          reason: cancelReason,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        toast.success('결제 취소가 완료되었습니다.');
+        setShowCancelModal(false);
+        setIsDetailModalOpen(false);
+        setCancelReason("");
+        // 결제 목록 새로고침
+        loadPaymentData();
+      } else {
+        toast.error(result.error || '취소 처리 중 오류가 발생했습니다.');
+      }
+    } catch (error) {
+      console.error('Cancel request error:', error);
+      toast.error('취소 요청 중 오류가 발생했습니다.');
+    } finally {
+      setIsCancelling(false);
+    }
+  };
+
+  const isRefundable = (payment: Payment) => {
+    // 이미 환불된 결제는 취소 불가
+    if (payment.status === 'refunded') return false;
+    
+    // 완료되지 않은 결제는 취소 불가
+    if (payment.status !== 'completed') return false;
+    
+    // NicePay 데이터에서 이미 취소된 거래인지 확인
+    if (nicePayData?.status === 'cancelled' || nicePayData?.status === 'partialCancelled') {
+      return false;
+    }
+    
+    const startDate = payment.program_participants?.programs?.start_date;
+    if (!startDate) return true; // 시작일이 없으면 환불 가능
+    
+    const now = new Date();
+    const programStartDate = new Date(startDate);
+    const daysDifference = Math.floor((programStartDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+
+    return daysDifference >= 7; // 7일 이상 남아야 환불 가능
+  };
+
+  const getRefundRestrictionMessage = (payment: Payment) => {
+    // 이미 취소된 거래인지 확인
+    if (nicePayData?.status === 'cancelled' || nicePayData?.status === 'partialCancelled') {
+      return '이 결제는 이미 취소되었습니다.';
+    }
+    
+    if (payment.status === 'refunded') {
+      return '이 결제는 이미 환불되었습니다.';
+    }
+    
+    const startDate = payment.program_participants?.programs?.start_date;
+    if (!startDate) return null;
+    
+    const now = new Date();
+    const programStartDate = new Date(startDate);
+    const daysDifference = Math.floor((programStartDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    
+    if (daysDifference < 7 && daysDifference >= 0) {
+      return `프로그램 시작 ${daysDifference}일 전으로 환불이 불가합니다.`;
+    } else if (daysDifference < 0) {
+      return '프로그램이 이미 시작되어 환불이 불가합니다.';
+    }
+    
+    return null;
+  };
+
+  const openCancelModal = () => {
+    if (!selectedPayment || !isRefundable(selectedPayment)) {
+      toast.error('환불 불가능한 결제입니다.');
+      return;
+    }
+    setShowCancelModal(true);
+    setCancelReason("");
+  };
+
+  const mapNicePayStatusForUI = (status: string) => {
+    switch (status) {
+      case 'paid':
+        return 'completed';
+      case 'ready':
+        return 'pending';
+      case 'failed':
+        return 'failed';
+      case 'cancelled':
+      case 'partialCancelled':
+        return 'refunded';
+      case 'expired':
+        return 'failed';
+      default:
+        return 'pending';
+    }
   };
 
   if (loading) {
@@ -382,7 +540,7 @@ export default function PaymentsPage() {
 
       {/* Payment Detail Modal */}
       <Dialog open={isDetailModalOpen} onOpenChange={setIsDetailModalOpen}>
-        <DialogContent className="sm:max-w-[600px]">
+        <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>결제 상세 정보</DialogTitle>
             <DialogDescription>
@@ -407,27 +565,62 @@ export default function PaymentsPage() {
 
               {/* 결제 정보 */}
               <div>
-                <h4 className="font-semibold text-gray-900 mb-2">결제 정보</h4>
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="font-semibold text-gray-900">결제 정보</h4>
+                  {isLoadingDetail && (
+                    <div className="flex items-center text-sm text-gray-500">
+                      <RefreshCw size={14} className="animate-spin mr-1" />
+                      상세 정보 로딩 중...
+                    </div>
+                  )}
+                </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="bg-gray-50 rounded-lg p-3">
                     <span className="text-sm text-gray-500">결제금액</span>
-                    <p className="font-semibold">₩{formatPrice(selectedPayment.amount || 0)}</p>
+                    <p className="font-semibold">
+                      ₩{formatPrice(nicePayData?.amount || selectedPayment.amount || 0)}
+                    </p>
+                    {nicePayData?.balanceAmt && nicePayData.balanceAmt !== nicePayData.amount && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        취소 가능: ₩{formatPrice(nicePayData.balanceAmt)}
+                      </p>
+                    )}
                   </div>
                   <div className="bg-gray-50 rounded-lg p-3">
                     <span className="text-sm text-gray-500">결제방법</span>
-                    <p className="font-semibold">{getPaymentMethodText(selectedPayment.payment_method || '')}</p>
+                    <p className="font-semibold">
+                      {nicePayData?.payMethod ? getPaymentMethodText(nicePayData.payMethod) : getPaymentMethodText(selectedPayment.payment_method || '')}
+                    </p>
+                    {nicePayData?.channel && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        {nicePayData.channel === 'pc' ? 'PC결제' : '모바일결제'}
+                      </p>
+                    )}
                   </div>
                   <div className="bg-gray-50 rounded-lg p-3">
                     <span className="text-sm text-gray-500">결제상태</span>
                     <div className="mt-1">
-                      {getStatusBadge(selectedPayment.status || '')}
+                      {nicePayData?.status ? getStatusBadge(mapNicePayStatusForUI(nicePayData.status)) : getStatusBadge(selectedPayment.status || '')}
                     </div>
+                    {nicePayData?.approveNo && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        승인번호: {nicePayData.approveNo}
+                      </p>
+                    )}
                   </div>
                   <div className="bg-gray-50 rounded-lg p-3">
                     <span className="text-sm text-gray-500">결제일시</span>
                     <p className="font-semibold text-sm">
-                      {selectedPayment.created_at ? formatDate(selectedPayment.created_at) : '날짜 없음'}
+                      {nicePayData?.paidAt && nicePayData.paidAt !== '0' 
+                        ? formatDate(nicePayData.paidAt) 
+                        : selectedPayment.created_at ? formatDate(selectedPayment.created_at) : '날짜 없음'
+                      }
                     </p>
+                    {nicePayData?.cancelledAt && nicePayData.cancelledAt !== '0' && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        취소일시: {formatDate(nicePayData.cancelledAt)}
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -447,30 +640,216 @@ export default function PaymentsPage() {
                         <span className="font-mono text-xs">{selectedPayment.payment_key}</span>
                       </div>
                     )}
+                    {selectedPayment.program_participants?.programs?.start_date && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">프로그램 시작일:</span>
+                        <span className="font-medium">
+                          {formatDate(selectedPayment.program_participants.programs.start_date)}
+                        </span>
+                      </div>
+                    )}
+                    {nicePayData?.goodsName && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">상품명:</span>
+                        <span className="font-medium">{nicePayData.goodsName}</span>
+                      </div>
+                    )}
+                    {nicePayData?.buyerName && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">구매자:</span>
+                        <span className="font-medium">{nicePayData.buyerName}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
 
+              {/* NicePay 상세 정보 */}
+              {nicePayData && (
+                <>
+                  {/* 카드 정보 */}
+                  {nicePayData.card && (
+                    <div>
+                      <h4 className="font-semibold text-gray-900 mb-2">카드 정보</h4>
+                      <div className="bg-gray-50 rounded-lg p-4">
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <span className="text-gray-500">카드사:</span>
+                            <p className="font-medium">{nicePayData.card.cardName}</p>
+                          </div>
+                          <div>
+                            <span className="text-gray-500">카드번호:</span>
+                            <p className="font-medium font-mono">{nicePayData.card.cardNum || '마스킹 처리됨'}</p>
+                          </div>
+                          <div>
+                            <span className="text-gray-500">할부:</span>
+                            <p className="font-medium">
+                              {nicePayData.card.cardQuota === '0' || nicePayData.card.cardQuota === 0 
+                                ? '일시불' 
+                                : `${nicePayData.card.cardQuota}개월`
+                              }
+                            </p>
+                          </div>
+                          <div>
+                            <span className="text-gray-500">무이자 여부:</span>
+                            <p className="font-medium">{nicePayData.card.isInterestFree ? '무이자' : '일반'}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 가상계좌 정보 */}
+                  {nicePayData.vbank && (
+                    <div>
+                      <h4 className="font-semibold text-gray-900 mb-2">가상계좌 정보</h4>
+                      <div className="bg-gray-50 rounded-lg p-4">
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <span className="text-gray-500">은행:</span>
+                            <p className="font-medium">{nicePayData.vbank.vbankName}</p>
+                          </div>
+                          <div>
+                            <span className="text-gray-500">계좌번호:</span>
+                            <p className="font-medium font-mono">{nicePayData.vbank.vbankNumber}</p>
+                          </div>
+                          <div>
+                            <span className="text-gray-500">예금주:</span>
+                            <p className="font-medium">{nicePayData.vbank.vbankHolder}</p>
+                          </div>
+                          <div>
+                            <span className="text-gray-500">입금만료일:</span>
+                            <p className="font-medium">{formatDate(nicePayData.vbank.vbankExpDate)}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 취소 내역 */}
+                  {nicePayData.cancels && nicePayData.cancels.length > 0 && (
+                    <div>
+                      <h4 className="font-semibold text-gray-900 mb-2">취소 내역</h4>
+                      <div className="space-y-2">
+                        {nicePayData.cancels.map((cancel: any, index: number) => (
+                          <div key={index} className="bg-gray-50 rounded-lg p-3">
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <p className="font-medium">₩{formatPrice(cancel.amount)}</p>
+                                <p className="text-sm text-gray-500">{cancel.reason}</p>
+                              </div>
+                              <p className="text-sm text-gray-500">{formatDate(cancel.cancelledAt)}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 영수증 URL */}
+                  {nicePayData.receiptUrl && (
+                    <div>
+                      <h4 className="font-semibold text-gray-900 mb-2">영수증</h4>
+                      <div className="bg-gray-50 rounded-lg p-4">
+                        <a 
+                          href={nicePayData.receiptUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[#56007C] hover:text-[#56007C]/80 underline flex items-center gap-2"
+                        >
+                          <Receipt size={16} />
+                          매출전표 확인
+                        </a>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+
               {/* 환불 버튼 */}
-              {selectedPayment.status === 'paid' && (
+              {selectedPayment.status === 'completed' && (
                 <div className="pt-4 border-t">
-                  <Button
-                    variant="outline"
-                    className="w-full text-red-600 border-red-200 hover:bg-red-50"
-                    onClick={() => {
-                      // TODO: 환불 액션 추가 예정
-                      console.log('환불 요청:', selectedPayment.id);
-                    }}
-                  >
-                    <RefreshCw size={16} className="mr-2" />
-                    환불 요청
-                  </Button>
+                  {isRefundable(selectedPayment) ? (
+                    <Button
+                      variant="outline"
+                      className="w-full text-red-600 border-red-200 hover:bg-red-50 cursor-pointer"
+                      onClick={openCancelModal}
+                      disabled={isCancelling}
+                    >
+                      <RefreshCw size={16} className="mr-2" />
+                      {isCancelling ? '처리 중...' : '환불 요청'}
+                    </Button>
+                  ) : (
+                    <div className="space-y-2">
+                      <Button
+                        variant="outline"
+                        className="w-full text-gray-400 border-gray-200 cursor-not-allowed"
+                        disabled
+                      >
+                        <RefreshCw size={16} className="mr-2" />
+                        환불 불가
+                      </Button>
+                      <p className="text-sm text-gray-500 text-center">
+                        {getRefundRestrictionMessage(selectedPayment)}
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Cancel Confirmation Modal */}
+      <AlertDialog open={showCancelModal} onOpenChange={setShowCancelModal}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>결제 취소 확인</AlertDialogTitle>
+            <AlertDialogDescription>
+              정말로 이 결제를 취소하시겠습니까? 취소된 결제는 되돌릴 수 없습니다.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          
+          <div className="space-y-4 py-4">
+            {selectedPayment && (
+              <div className="bg-gray-50 rounded-lg p-3">
+                <div className="text-sm text-gray-600">취소할 결제</div>
+                <div className="font-semibold">
+                  {selectedPayment.program_participants?.programs?.title || '프로그램 정보 없음'}
+                </div>
+                <div className="text-sm text-gray-600">
+                  ₩{formatPrice(selectedPayment.amount || 0)}
+                </div>
+              </div>
+            )}
+            
+            <div className="space-y-2">
+              <Label htmlFor="cancelReason">취소 사유 *</Label>
+              <Textarea
+                id="cancelReason"
+                placeholder="취소 사유를 입력해주세요."
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                rows={3}
+              />
+            </div>
+          </div>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isCancelling}>
+              취소
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleCancelRequest}
+              disabled={isCancelling || !cancelReason.trim()}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {isCancelling ? '처리 중...' : '취소 확정'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

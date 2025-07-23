@@ -9,8 +9,8 @@ export async function GET(request: NextRequest) {
   try {
     console.log('Getting NicePay config...')
     console.log('Environment variables check:')
-    console.log('NICEPAY_ACCESS_CLIENT:', process.env.NICEPAY_ACCESS_CLIENT ? 'SET' : 'NOT SET')
-    console.log('NICEPAY_ACCESS_SECRET:', process.env.NICEPAY_ACCESS_SECRET ? 'SET' : 'NOT SET')
+    console.log('NICEPAY_CLIENT_ID:', process.env.NICEPAY_CLIENT_ID ? 'SET' : 'NOT SET')
+    console.log('NICEPAY_SECRET_KEY:', process.env.NICEPAY_SECRET_KEY ? 'SET' : 'NOT SET')
     
     const config = {
       clientId: getNicePayClientId(),

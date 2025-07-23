@@ -25,6 +25,7 @@ export default function AdminLayout({
     try {
       const currentUser = await getCurrentUser()
       const profile = await getProfile(currentUser?.id ?? '')
+      console.log("profile", profile)
       
       if (!currentUser || !profile?.is_admin) {
         router.push('/')

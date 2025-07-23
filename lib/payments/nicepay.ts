@@ -4,7 +4,7 @@
  */
 
 // NicePay API endpoints (Server approval method)
-const NICEPAY_API_ENDPOINTS = {
+export const NICEPAY_API_ENDPOINTS = {
   sandbox: 'https://sandbox-api.nicepay.co.kr/v1/payments',
   production: 'https://api.nicepay.co.kr/v1/payments'
 }
@@ -22,11 +22,11 @@ const API_BASE_URL = NICEPAY_API_ENDPOINTS.production
 
 // NicePay credentials - only used on server side
 function getCredentials() {
-  const CLIENT_ID = process.env.NICEPAY_ACCESS_CLIENT
-  const ACCESS_TOKEN = process.env.NICEPAY_ACCESS_SECRET // This is actually the access token for server approval
+  const CLIENT_ID = process.env.NICEPAY_CLIENT_ID
+  const ACCESS_TOKEN = process.env.NICEPAY_SECRET_KEY // This is actually the access token for server approval
 
   if (!CLIENT_ID || !ACCESS_TOKEN) {
-    throw new Error('NicePay credentials not configured. Please set NICEPAY_ACCESS_CLIENT and NICEPAY_ACCESS_SECRET environment variables.')
+    throw new Error('NicePay credentials not configured. Please set NICEPAY_CLIENT_ID and NICEPAY_SECRET_KEY environment variables.')
   }
 
   return { CLIENT_ID, ACCESS_TOKEN }
@@ -239,6 +239,7 @@ export async function cancelPayment(
       })
     })
 
+
     if (!response.ok) {
       const errorText = await response.text()
       console.error('NicePay cancel error:', errorText)
@@ -363,5 +364,5 @@ export default {
   getPaymentStatus,
   formatAmount,
   validatePaymentAmount,
-  generatePaymentConfig
+  generatePaymentConfig,
 }

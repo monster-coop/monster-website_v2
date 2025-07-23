@@ -117,8 +117,30 @@ export async function getPrograms(filters?: ProgramFilters) {
  * @returns 프로그램 목록과 응답 형태
  */
 export async function getAllPrograms() {
+  const supabase = createClient()
+  
   try {
-    const data = await getPrograms({ is_active: true })
+    const { data, error } = await supabase
+      .from('programs')
+      .select(`
+        *,
+        program_categories (
+          id,
+          name,
+          slug,
+          icon
+        ),
+        thumbnail_photo:photos!thumbnail (
+          storage_url
+        )
+      `)
+      .eq('is_active', true)
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      return { data: null, error: error.message }
+    }
+
     return { data, error: null }
   } catch (error) {
     return { data: null, error: error instanceof Error ? error.message : '프로그램을 불러오는데 실패했습니다.' }
@@ -252,10 +274,24 @@ export async function getProgramBySlug(slug: string) {
     `)
     .eq('program_id', program.id)
 
+  // 프로그램 이미지 조회
+  const { data: programPhotos } = await supabase
+    .from('photos')
+    .select('storage_url, filename')
+    .eq('program_id', program.id)
+    .order('created_at', { ascending: false })
+
   const result = {
     ...program,
     program_categories: programCategory,
-    program_participants: participants || []
+    program_participants: participants || [],
+    program_photos: (programPhotos || []).map(photo => ({
+      photo_type: 'gallery', // 단순화된 형태로 전부 gallery로 반환
+      photo: {
+        storage_url: photo.storage_url,
+        filename: photo.filename
+      }
+    }))
   }
 
   return { data: result, error: null }

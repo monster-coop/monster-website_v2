@@ -39,6 +39,13 @@ type Program = Database['public']['Tables']['programs']['Row'] & {
       full_name: string | null;
     };
   }>;
+  program_photos?: Array<{
+    photo_type: string;
+    photo: {
+      storage_url: string;
+      filename: string;
+    };
+  }>;
 };
 
 const fadeInUp = {
@@ -62,6 +69,7 @@ export default function ProgramDetailPage() {
   const [loading, setLoading] = useState(true); 
   const [user, setUser] = useState<any>(null);
   const [isWishlisted, setIsWishlisted] = useState(false);
+  const [hasRegistered, setHasRegistered] = useState(false);
   const [selectedTab, setSelectedTab] = useState<'overview' | 'curriculum' | 'instructor' | 'reviews'>('overview');
 
   const slug = params?.slug as string;
@@ -73,12 +81,19 @@ export default function ProgramDetailPage() {
     }
   }, [slug]);
 
+  // 프로그램과 사용자 정보가 모두 로드된 후 등록 확인
+  useEffect(() => {
+    if (user && program) {
+      checkUserRegistration(user.id, program.id);
+    }
+  }, [user, program]);
+
   const loadProgram = async () => {
     try {
       setLoading(true);
       const response = await getProgramBySlug(slug);
       if (response.data) {
-        setProgram(response.data);
+        setProgram(response.data as unknown as Program);
       } else {
         router.push('/404');
       }
@@ -94,8 +109,32 @@ export default function ProgramDetailPage() {
     try {
       const currentUser = await getCurrentUser();
       setUser(currentUser);
+      
+      // checkUserRegistration은 별도 useEffect에서 처리
     } catch (error) {
       console.error('Failed to load user:', error);
+    }
+  };
+
+  const checkUserRegistration = async (userId: string, programId: string) => {
+    try {
+      const { createClient } = await import('@/lib/supabase/client');
+      const supabase = createClient();
+      
+      const { data, error } = await supabase
+        .from('program_participants')
+        .select('id, status, payment_status')
+        .eq('user_id', userId)
+        .eq('program_id', programId)
+        .eq('status', 'confirmed') // 결제 완료된 등록만 확인
+        .eq('payment_status', 'paid')
+        .limit(1);
+
+      if (!error && data && data.length > 0) {
+        setHasRegistered(true);
+      }
+    } catch (error) {
+      console.error('Failed to check user registration:', error);
     }
   };
 
@@ -334,12 +373,20 @@ export default function ProgramDetailPage() {
 
                 {/* Booking Button */}
                 {program.status === 'open' ? (
-                  <Link
-                    href={user ? `/programs/${program.slug}/book` : '/auth/login'}
-                    className="w-full bg-[#56007C] text-white py-3 px-4 rounded-lg hover:bg-[#56007C]/90 transition-colors font-semibold text-center block"
-                  >
-                    {user ? '지금 신청하기' : '로그인 후 신청하기'}
-                  </Link>
+                  <div className="space-y-2">
+                    {hasRegistered && (
+                      <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 p-2 rounded-lg">
+                        <CheckCircle size={16} />
+                        <span>이미 신청한 프로그램입니다</span>
+                      </div>
+                    )}
+                    <Link
+                      href={user ? `/programs/${program.slug}/book` : '/auth/login'}
+                      className="w-full bg-[#56007C] text-white py-3 px-4 rounded-lg hover:bg-[#56007C]/90 transition-colors font-semibold text-center block"
+                    >
+                      {user ? (hasRegistered ? '추가 신청하기' : '지금 신청하기') : '로그인 후 신청하기'}
+                    </Link>
+                  </div>
                 ) : (
                   <button
                     disabled
@@ -406,24 +453,51 @@ export default function ProgramDetailPage() {
             transition={{ duration: 0.3 }}
           >
             {selectedTab === 'overview' && (
-              <div className="prose prose-lg max-w-4xl">
-                <h3>프로그램 상세 정보</h3>
-                <p>{program.description}</p>
-                
-                <h4>일정 및 시간</h4>
-                <ul>
-                  <li>시작일: {formatDate(program.start_date!)}</li>
-                  <li>종료일: {formatDate(program.end_date!)}</li>
-                  <li>시간: {formatTime(program.start_time!)} - {formatTime(program.end_time!)}</li>
-                  <li>총 교육시간: {program.duration_hours}시간</li>
-                </ul>
+              <div className="space-y-8">
+                {/* Image Gallery */}
+                {program.program_photos && program.program_photos.length > 0 && (
+                  <div className="space-y-4">
+                    <h3 className="text-2xl font-bold text-gray-900">프로그램 이미지</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {program.program_photos.map((programPhoto, index) => (
+                        <div key={index} className="relative group">
+                          <img
+                            src={programPhoto.photo.storage_url}
+                            alt={programPhoto.photo.filename}
+                            className="w-full h-48 object-cover rounded-lg border border-gray-200 hover:shadow-lg transition-shadow"
+                          />
+                          {programPhoto.photo_type === 'thumbnail' && (
+                            <div className="absolute top-2 left-2 bg-blue-500 text-white px-2 py-1 rounded text-xs font-medium flex items-center gap-1">
+                              <Star size={12} />
+                              썸네일
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
-                <h4>참가 대상</h4>
-                <ul>
-                  <li>난이도: {getDifficultyLabel(program.difficulty_level || '')}</li>
-                  <li>최대 참가인원: {program.max_participants}명</li>
-                  <li>최소 참가인원: {program.min_participants}명</li>
-                </ul>
+                {/* Program Details */}
+                <div className="prose prose-lg max-w-4xl">
+                  <h3>프로그램 상세 정보</h3>
+                  <p>{program.description}</p>
+                  
+                  <h4>일정 및 시간</h4>
+                  <ul>
+                    <li>시작일: {formatDate(program.start_date!)}</li>
+                    <li>종료일: {formatDate(program.end_date!)}</li>
+                    <li>시간: {formatTime(program.start_time!)} - {formatTime(program.end_time!)}</li>
+                    <li>총 교육시간: {program.duration_hours}시간</li>
+                  </ul>
+
+                  <h4>참가 대상</h4>
+                  <ul>
+                    <li>난이도: {getDifficultyLabel(program.difficulty_level || '')}</li>
+                    <li>최대 참가인원: {program.max_participants}명</li>
+                    <li>최소 참가인원: {program.min_participants}명</li>
+                  </ul>
+                </div>
               </div>
             )}
 

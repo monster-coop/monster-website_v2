@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/client'
 import { Database } from '@/types/database'
 
 // Types
@@ -27,7 +27,7 @@ export interface CreateProgramData {
   instructor_name?: string
   instructor_bio?: string
   instructor_image_url?: string
-  thumbnail_url?: string
+  thumbnail?: string
   notion_page_id?: string
   tags?: string[]
   is_featured?: boolean
@@ -82,7 +82,7 @@ export async function createProgram(programData: CreateProgramData): Promise<Pro
     instructor_name: programData.instructor_name || null,
     instructor_bio: programData.instructor_bio || null,
     instructor_image_url: programData.instructor_image_url || null,
-    thumbnail_url: programData.thumbnail_url || null,
+    thumbnail: programData.thumbnail || null,
     notion_page_id: programData.notion_page_id || null,
     tags: programData.tags || null,
     is_featured: programData.is_featured ?? false,
@@ -117,7 +117,13 @@ export async function createProgram(programData: CreateProgramData): Promise<Pro
 export async function updateProgram(updateData: UpdateProgramData): Promise<Program> {
   const supabase = await createClient()
 
-  const { id, ...programData } = updateData
+  const { id, ...rawProgramData } = updateData
+  
+  // Clean up empty strings to null for UUID fields
+  const programData = {
+    ...rawProgramData,
+    thumbnail: rawProgramData.thumbnail === '' ? null : rawProgramData.thumbnail
+  }
 
   // Slug 중복 체크 (다른 프로그램과)
   if (programData.slug) {
@@ -141,7 +147,7 @@ export async function updateProgram(updateData: UpdateProgramData): Promise<Prog
     .single()
 
   if (error) {
-    console.error('Error updating program:', error)
+    console.error('Error updating program:', error.message)
     throw new Error('프로그램 업데이트에 실패했습니다.')
   }
 

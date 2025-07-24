@@ -16,6 +16,9 @@ type Program = Database['public']['Tables']['programs']['Row'] & {
     slug: string;
     icon: string | null;
   } | null;
+  thumbnail_photo?: {
+    storage_url: string;
+  } | null;
 };
 
 const fadeInUp = {
@@ -236,6 +239,16 @@ export default function ProgramsPage() {
                 >
                   {/* Program Image */}
                   <div className="relative h-48 bg-gradient-to-br from-[#56007C]/20 to-purple-600/30">
+                    {program.thumbnail_photo?.storage_url ? (
+                      <img
+                        src={program.thumbnail_photo.storage_url}
+                        alt={program.title}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-[#56007C]/20 to-purple-600/30" />
+                    )}
+                    
                     {program.is_featured && (
                       <div className="absolute top-4 left-4 bg-[#56007C] text-white px-2 py-1 rounded-full text-sm font-semibold flex items-center gap-1">
                         <Star size={14} />

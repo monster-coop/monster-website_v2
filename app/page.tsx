@@ -89,17 +89,17 @@ export default function LandingPage() {
                 className="flex flex-col sm:flex-row gap-4 justify-center"
               >
                 <a
-                  href="#programs"
+                  href="/programs"
                   className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-8 py-3 rounded-full hover:from-purple-700 hover:to-pink-700 transition-all duration-300 shadow-lg hover:shadow-purple-500/25 flex items-center justify-center gap-2 cursor-pointer"
                 >
                   지금 시작하기 <ArrowRight size={20} />
                 </a>
-                <a
+                {/* <a
                   href="/programs"
                   className="border border-purple-400 text-purple-400 px-8 py-3 rounded-full hover:bg-purple-400/10 transition-colors backdrop-blur-sm cursor-pointer"
                 >
                   프로그램 보기
-                </a>
+                </a> */}
               </motion.div>
             </motion.div>
           </div>
@@ -298,9 +298,9 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* Partners Section */}
-        <section id="about" className="py-16 relative">
-          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-blue-900/10 to-transparent"></div>
+        {/* Partners & Awards Section */}
+        <section id="about" className="py-20 relative">
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-purple-900/10 to-transparent"></div>
           <div className="relative z-10">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <motion.div
@@ -308,101 +308,116 @@ export default function LandingPage() {
                 whileInView="animate"
                 viewport={{ once: true }}
                 variants={staggerContainer}
-                className="text-center mb-12"
+                className="text-center mb-16"
               >
                 <motion.h2
                   variants={fadeInUp}
-                  className="text-3xl md:text-4xl font-bold text-gray-900 mb-4"
+                  className="text-4xl md:text-5xl font-bold text-white mb-6"
                 >
-                  파트너 및 수상 내역
+                  신뢰받는 교육 파트너
                 </motion.h2>
+                <motion.p
+                  variants={fadeInUp}
+                  className="text-xl text-gray-300 max-w-3xl mx-auto"
+                >
+                  다양한 기관과의 협력을 통해 검증된 교육 프로그램을 제공합니다
+                </motion.p>
               </motion.div>
 
-              <div className="grid md:grid-cols-2 gap-12">
+              <div className="grid lg:grid-cols-2 gap-16 items-center">
+                {/* Partners */}
                 <motion.div
                   initial="initial"
                   whileInView="animate"
                   viewport={{ once: true }}
                   variants={fadeInUp}
                 >
-                  <h3 className="text-xl font-bold text-gray-900 mb-6">
-                    협력 기관
+                  <h3 className="text-2xl font-bold text-white mb-8 text-center lg:text-left">
+                    협력 파트너
                   </h3>
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-4 p-4 bg-white rounded-lg shadow-sm">
-                      <div className="w-12 h-12 bg-[#56007C]/10 rounded-lg flex items-center justify-center">
-                        <Users className="text-[#56007C]" size={20} />
-                      </div>
-                      <div>
-                        <div className="font-semibold text-gray-900">
-                          이우학교
+                  <div className="grid gap-6">
+                    <div className="group bg-white/5 backdrop-blur-xl p-6 rounded-2xl border border-white/10 hover:border-purple-400/50 transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/20">
+                      <div className="flex items-center gap-4">
+                        <div className="w-16 h-16 bg-purple-600/20 rounded-2xl flex items-center justify-center group-hover:bg-purple-600/30 transition-colors">
+                          <Users className="text-purple-400" size={28} />
                         </div>
-                        <div className="text-sm text-gray-600">
-                          정규과정 운영
+                        <div>
+                          <h4 className="text-lg font-semibold text-white mb-1">이우학교</h4>
+                          <p className="text-gray-300">정규 교육과정 운영 파트너</p>
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-4 p-4 bg-white rounded-lg shadow-sm">
-                      <div className="w-12 h-12 bg-[#56007C]/10 rounded-lg flex items-center justify-center">
-                        <Users className="text-[#56007C]" size={20} />
-                      </div>
-                      <div>
-                        <div className="font-semibold text-gray-900">
-                          HBM 사회적협동조합
+                    
+                    <div className="group bg-white/5 backdrop-blur-xl p-6 rounded-2xl border border-white/10 hover:border-blue-400/50 transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/20">
+                      <div className="flex items-center gap-4">
+                        <div className="w-16 h-16 bg-blue-600/20 rounded-2xl flex items-center justify-center group-hover:bg-blue-600/30 transition-colors">
+                          <Users className="text-blue-400" size={28} />
                         </div>
-                        <div className="text-sm text-gray-600">교육 협력</div>
+                        <div>
+                          <h4 className="text-lg font-semibold text-white mb-1">HBM 사회적협동조합</h4>
+                          <p className="text-gray-300">교육 프로그램 공동 개발</p>
+                        </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-4 p-4 bg-white rounded-lg shadow-sm">
-                      <div className="w-12 h-12 bg-[#56007C]/10 rounded-lg flex items-center justify-center">
-                        <Users className="text-[#56007C]" size={20} />
-                      </div>
-                      <div>
-                        <div className="font-semibold text-gray-900">
-                          노원구청
+
+                    <div className="group bg-white/5 backdrop-blur-xl p-6 rounded-2xl border border-white/10 hover:border-green-400/50 transition-all duration-300 hover:shadow-lg hover:shadow-green-500/20">
+                      <div className="flex items-center gap-4">
+                        <div className="w-16 h-16 bg-green-600/20 rounded-2xl flex items-center justify-center group-hover:bg-green-600/30 transition-colors">
+                          <Users className="text-green-400" size={28} />
                         </div>
-                        <div className="text-sm text-gray-600">
-                          지역사회 연계
+                        <div>
+                          <h4 className="text-lg font-semibold text-white mb-1">노원구청</h4>
+                          <p className="text-gray-300">지역사회 연계 교육 협력</p>
                         </div>
                       </div>
                     </div>
                   </div>
                 </motion.div>
 
+                {/* Awards */}
                 <motion.div
                   initial="initial"
                   whileInView="animate"
                   viewport={{ once: true }}
                   variants={fadeInUp}
                 >
-                  <h3 className="text-xl font-bold text-gray-900 mb-6">
-                    수상 내역
+                  <h3 className="text-2xl font-bold text-white mb-8 text-center lg:text-left">
+                    수상 및 인정
                   </h3>
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-4 p-4 bg-white rounded-lg shadow-sm">
-                      <div className="w-12 h-12 bg-[#56007C]/10 rounded-lg flex items-center justify-center">
-                        <Award className="text-[#56007C]" size={20} />
-                      </div>
-                      <div>
-                        <div className="font-semibold text-gray-900">
-                          노원구청장 표창
+                  <div className="space-y-6">
+                    <div className="group bg-white/5 backdrop-blur-xl p-6 rounded-2xl border border-white/10 hover:border-yellow-400/50 transition-all duration-300 hover:shadow-lg hover:shadow-yellow-500/20">
+                      <div className="flex items-center gap-4">
+                        <div className="w-16 h-16 bg-yellow-500/20 rounded-2xl flex items-center justify-center group-hover:bg-yellow-500/30 transition-colors">
+                          <Award className="text-yellow-400" size={28} />
                         </div>
-                        <div className="text-sm text-gray-600">2023년 수료</div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-4 p-4 bg-white rounded-lg shadow-sm">
-                      <div className="w-12 h-12 bg-[#56007C]/10 rounded-lg flex items-center justify-center">
-                        <Award className="text-[#56007C]" size={20} />
-                      </div>
-                      <div>
-                        <div className="font-semibold text-gray-900">
-                          이우학교 정규과정 운영
-                        </div>
-                        <div className="text-sm text-gray-600">
-                          지속적인 교육 실적
+                        <div>
+                          <h4 className="text-lg font-semibold text-white mb-1">노원구청장 표창</h4>
+                          <p className="text-gray-300">우수 교육 기관 인정 (2023)</p>
                         </div>
                       </div>
                     </div>
+
+                    <div className="group bg-white/5 backdrop-blur-xl p-6 rounded-2xl border border-white/10 hover:border-purple-400/50 transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/20">
+                      <div className="flex items-center gap-4">
+                        <div className="w-16 h-16 bg-purple-600/20 rounded-2xl flex items-center justify-center group-hover:bg-purple-600/30 transition-colors">
+                          <CheckCircle className="text-purple-400" size={28} />
+                        </div>
+                        <div>
+                          <h4 className="text-lg font-semibold text-white mb-1">정규과정 운영 실적</h4>
+                          <p className="text-gray-300">지속적인 교육 품질 인증</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 연혁 보러가기 링크 */}
+                  <div className="text-center lg:text-left mt-8">
+                    <Link
+                      href="/history"
+                      className="inline-flex items-center text-purple-400 hover:text-purple-300 transition-colors font-medium"
+                    >
+                      자세한 연혁 보러가기 <ArrowRight size={16} className="ml-2" />
+                    </Link>
                   </div>
                 </motion.div>
               </div>
@@ -411,148 +426,236 @@ export default function LandingPage() {
         </section>
 
         {/* Team Section */}
-        <section className="py-16 relative">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <motion.div
-              initial="initial"
-              whileInView="animate"
-              viewport={{ once: true }}
-              variants={staggerContainer}
-              className="text-center mb-12"
-            >
-              <motion.h2
-                variants={fadeInUp}
-                className="text-3xl md:text-4xl font-bold text-gray-900 mb-4"
-              >
-                몬스터 협동조합 팀
-              </motion.h2>
-              <motion.p variants={fadeInUp} className="text-xl text-gray-600">
-                전문성과 열정을 바탕으로 팀프러너를 양성하는 교육 전문가들
-              </motion.p>
-            </motion.div>
-
-            <motion.div
-              initial="initial"
-              whileInView="animate"
-              viewport={{ once: true }}
-              variants={staggerContainer}
-              className="grid md:grid-cols-3 gap-8"
-            >
-              <motion.div variants={fadeInUp} className="text-center">
-                <div className="w-32 h-32 bg-[#56007C]/10 rounded-full mx-auto mb-4 flex items-center justify-center">
-                  <Users className="text-[#56007C]" size={48} />
-                </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">
-                  대표 이사
-                </h3>
-                <p className="text-gray-600 mb-4">
-                  팀 기업가정신 교육 전문가로 다년간의 교육 경험을 바탕으로
-                  혁신적인 교육 프로그램을 설계합니다.
-                </p>
-                <div className="flex justify-center gap-2">
-                  <span className="px-3 py-1 bg-[#56007C]/10 text-[#56007C] text-sm rounded-full">
-                    교육학 박사
-                  </span>
-                  <span className="px-3 py-1 bg-[#56007C]/10 text-[#56007C] text-sm rounded-full">
-                    창업 멘토
-                  </span>
-                </div>
-              </motion.div>
-
-              <motion.div variants={fadeInUp} className="text-center">
-                <div className="w-32 h-32 bg-[#56007C]/10 rounded-full mx-auto mb-4 flex items-center justify-center">
-                  <Award className="text-[#56007C]" size={48} />
-                </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">
-                  교육 디렉터
-                </h3>
-                <p className="text-gray-600 mb-4">
-                  프로젝트 기반 학습과 팀워크 교육의 전문가로 실무 중심의
-                  혁신적인 교육 방법론을 개발합니다.
-                </p>
-                <div className="flex justify-center gap-2">
-                  <span className="px-3 py-1 bg-[#56007C]/10 text-[#56007C] text-sm rounded-full">
-                    PBL 전문가
-                  </span>
-                  <span className="px-3 py-1 bg-[#56007C]/10 text-[#56007C] text-sm rounded-full">
-                    팀빌딩
-                  </span>
-                </div>
-              </motion.div>
-
-              <motion.div variants={fadeInUp} className="text-center">
-                <div className="w-32 h-32 bg-[#56007C]/10 rounded-full mx-auto mb-4 flex items-center justify-center">
-                  <Calendar className="text-[#56007C]" size={48} />
-                </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">
-                  프로그램 매니저
-                </h3>
-                <p className="text-gray-600 mb-4">
-                  체험형 학습 프로그램과 글로벌 교육 여행을 기획하고 운영하는
-                  전문가입니다.
-                </p>
-                <div className="flex justify-center gap-2">
-                  <span className="px-3 py-1 bg-[#56007C]/10 text-[#56007C] text-sm rounded-full">
-                    여행 기획
-                  </span>
-                  <span className="px-3 py-1 bg-[#56007C]/10 text-[#56007C] text-sm rounded-full">
-                    체험 학습
-                  </span>
-                </div>
-              </motion.div>
-            </motion.div>
-          </div>
-        </section>
-
-        {/* CTA Section */}
-        <section
-          id="subscription"
-          className="py-16 bg-gradient-to-r from-purple-900 via-purple-800 to-purple-900 text-white relative"
-        >
-          <div className="absolute inset-0 bg-gradient-to-r from-purple-600/20 to-pink-600/20"></div>
+        <section className="py-20 relative">
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-blue-900/10 to-transparent"></div>
           <div className="relative z-10">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <motion.div
                 initial="initial"
                 whileInView="animate"
                 viewport={{ once: true }}
                 variants={staggerContainer}
+                className="text-center mb-16"
               >
                 <motion.h2
                   variants={fadeInUp}
-                  className="text-3xl md:text-4xl font-bold mb-4"
+                  className="text-4xl md:text-5xl font-bold text-white mb-6"
                 >
-                  지금 바로 시작하세요
+                  전문가 팀
                 </motion.h2>
                 <motion.p
                   variants={fadeInUp}
-                  className="text-xl mb-8 opacity-90"
+                  className="text-xl text-gray-300 max-w-3xl mx-auto"
                 >
-                  팀프러너로의 변화를 경험해보세요
+                  풍부한 경험과 전문성을 바탕으로 최고의 교육을 제공하는 전문가들
                 </motion.p>
-                <motion.div
-                  variants={fadeInUp}
-                  className="flex flex-col sm:flex-row gap-4 justify-center"
-                >
-                  <a
-                    href="#programs"
-                    className="bg-white text-purple-900 px-8 py-3 rounded-full hover:bg-gray-100 transition-all duration-300 font-semibold shadow-lg hover:shadow-xl cursor-pointer"
-                  >
-                    프로그램 예약하기
-                  </a>
-                  <a
-                    href="#subscription"
-                    className="border border-white text-white px-8 py-3 rounded-full hover:bg-white/10 transition-all duration-300 backdrop-blur-sm cursor-pointer"
-                  >
-                    SQUEEZE LMS 구독하기
-                  </a>
-                  <a
-                    href="#contact"
-                    className="border border-white text-white px-8 py-3 rounded-full hover:bg-white/10 transition-all duration-300 backdrop-blur-sm cursor-pointer"
-                  >
-                    상담 신청하기
-                  </a>
+              </motion.div>
+
+              <motion.div
+                initial="initial"
+                whileInView="animate"
+                viewport={{ once: true }}
+                variants={staggerContainer}
+                className="grid md:grid-cols-3 gap-8"
+              >
+                <motion.div variants={fadeInUp} className="group">
+                  <div className="bg-white/5 backdrop-blur-xl p-8 rounded-3xl border border-white/10 hover:border-purple-400/50 transition-all duration-300 hover:shadow-2xl hover:shadow-purple-500/20 text-center">
+                    <div className="w-24 h-24 bg-gradient-to-r from-purple-600/20 to-pink-600/20 rounded-full mx-auto mb-6 flex items-center justify-center group-hover:from-purple-600/30 group-hover:to-pink-600/30 transition-all duration-300">
+                      <Users className="text-purple-400" size={40} />
+                    </div>
+                    <h3 className="text-xl font-bold text-white mb-3">대표 이사</h3>
+                    <p className="text-gray-300 mb-6 leading-relaxed">
+                      팀 기업가정신 교육의 선구자로서 혁신적인 교육 방법론을 개발하고 
+                      다년간의 현장 경험을 통해 검증된 프로그램을 설계합니다.
+                    </p>
+                    <div className="flex flex-wrap justify-center gap-2">
+                      <span className="px-4 py-2 bg-purple-600/20 text-purple-300 text-sm rounded-full border border-purple-400/30">
+                        교육학 박사
+                      </span>
+                      <span className="px-4 py-2 bg-pink-600/20 text-pink-300 text-sm rounded-full border border-pink-400/30">
+                        창업 멘토
+                      </span>
+                    </div>
+                  </div>
                 </motion.div>
+
+                <motion.div variants={fadeInUp} className="group">
+                  <div className="bg-white/5 backdrop-blur-xl p-8 rounded-3xl border border-white/10 hover:border-purple-400/50 transition-all duration-300 hover:shadow-2xl hover:shadow-purple-500/20 text-center">
+                    <div className="w-24 h-24 bg-gradient-to-r from-blue-600/20 to-purple-600/20 rounded-full mx-auto mb-6 flex items-center justify-center group-hover:from-blue-600/30 group-hover:to-purple-600/30 transition-all duration-300">
+                      <Award className="text-blue-400" size={40} />
+                    </div>
+                    <h3 className="text-xl font-bold text-white mb-3">교육 디렉터</h3>
+                    <p className="text-gray-300 mb-6 leading-relaxed">
+                      프로젝트 기반 학습(PBL)과 팀워크 교육의 전문가로서 
+                      실무 중심의 교육 커리큘럼을 개발하고 운영합니다.
+                    </p>
+                    <div className="flex flex-wrap justify-center gap-2">
+                      <span className="px-4 py-2 bg-blue-600/20 text-blue-300 text-sm rounded-full border border-blue-400/30">
+                        PBL 전문가
+                      </span>
+                      <span className="px-4 py-2 bg-purple-600/20 text-purple-300 text-sm rounded-full border border-purple-400/30">
+                        팀빌딩
+                      </span>
+                    </div>
+                  </div>
+                </motion.div>
+
+                <motion.div variants={fadeInUp} className="group">
+                  <div className="bg-white/5 backdrop-blur-xl p-8 rounded-3xl border border-white/10 hover:border-purple-400/50 transition-all duration-300 hover:shadow-2xl hover:shadow-purple-500/20 text-center">
+                    <div className="w-24 h-24 bg-gradient-to-r from-green-600/20 to-blue-600/20 rounded-full mx-auto mb-6 flex items-center justify-center group-hover:from-green-600/30 group-hover:to-blue-600/30 transition-all duration-300">
+                      <Calendar className="text-green-400" size={40} />
+                    </div>
+                    <h3 className="text-xl font-bold text-white mb-3">프로그램 매니저</h3>
+                    <p className="text-gray-300 mb-6 leading-relaxed">
+                      체험형 학습과 글로벌 교육 여행 프로그램을 기획하고 
+                      참가자들의 성장을 위한 최적의 경험을 설계합니다.
+                    </p>
+                    <div className="flex flex-wrap justify-center gap-2">
+                      <span className="px-4 py-2 bg-green-600/20 text-green-300 text-sm rounded-full border border-green-400/30">
+                        여행 기획
+                      </span>
+                      <span className="px-4 py-2 bg-blue-600/20 text-blue-300 text-sm rounded-full border border-blue-400/30">
+                        체험 학습
+                      </span>
+                    </div>
+                  </div>
+                </motion.div>
+              </motion.div>
+            </div>
+          </div>
+        </section>
+
+        {/* CTA Section */}
+        <section id="subscription" className="py-24 relative">
+          <div className="absolute inset-0 bg-gradient-to-r from-purple-600/20 to-pink-600/20"></div>
+          <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-bl from-purple-500/10 to-transparent rounded-full blur-3xl"></div>
+          <div className="absolute bottom-0 left-0 w-96 h-96 bg-gradient-to-tr from-pink-500/10 to-transparent rounded-full blur-3xl"></div>
+          
+          <div className="relative z-10">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <motion.div
+                initial="initial"
+                whileInView="animate"
+                viewport={{ once: true }}
+                variants={staggerContainer}
+                className="text-center mb-16"
+              >
+                <motion.h2
+                  variants={fadeInUp}
+                  className="text-4xl md:text-6xl font-bold text-white mb-6"
+                >
+                  팀프러너의 여정을
+                  <br />
+                  <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+                    지금 시작하세요
+                  </span>
+                </motion.h2>
+                <motion.p
+                  variants={fadeInUp}
+                  className="text-xl text-gray-300 mb-12 max-w-3xl mx-auto leading-relaxed"
+                >
+                  혁신적인 교육 프로그램을 통해 새로운 가능성을 발견하고,
+                  <br className="hidden sm:block" />
+                  전문가와 함께 성장의 기회를 만들어보세요
+                </motion.p>
+              </motion.div>
+
+              <motion.div
+                initial="initial"
+                whileInView="animate"
+                viewport={{ once: true }}
+                variants={staggerContainer}
+                className="grid md:grid-cols-3 gap-8 mb-16"
+              >
+                <motion.div variants={fadeInUp} className="group">
+                  <div className="bg-white/5 backdrop-blur-xl p-8 rounded-3xl border border-white/10 hover:border-purple-400/50 transition-all duration-300 hover:shadow-2xl hover:shadow-purple-500/20 text-center">
+                    <div className="w-16 h-16 bg-purple-600/20 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:bg-purple-600/30 transition-colors">
+                      <Users className="text-purple-400" size={32} />
+                    </div>
+                    <h3 className="text-2xl font-bold text-white mb-4">오프라인 교육</h3>
+                    <p className="text-gray-300 mb-6 leading-relaxed">
+                      실습 중심의 팀 기업가정신 교육과
+                      체험형 학습 프로그램
+                    </p>
+                    <a
+                      href="/programs"
+                      className="inline-flex items-center bg-gradient-to-r from-purple-600 to-purple-700 text-white px-6 py-3 rounded-full font-semibold hover:from-purple-700 hover:to-purple-800 transition-all duration-300 shadow-lg hover:shadow-purple-500/25"
+                    >
+                      프로그램 보기 <ArrowRight size={18} className="ml-2" />
+                    </a>
+                  </div>
+                </motion.div>
+
+                <motion.div variants={fadeInUp} className="group">
+                  <div className="bg-white/5 backdrop-blur-xl p-8 rounded-3xl border border-white/10 hover:border-pink-400/50 transition-all duration-300 hover:shadow-2xl hover:shadow-pink-500/20 text-center">
+                    <div className="w-16 h-16 bg-pink-600/20 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:bg-pink-600/30 transition-colors">
+                      <Award className="text-pink-400" size={32} />
+                    </div>
+                    <h3 className="text-2xl font-bold text-white mb-4">SQUEEZE LMS</h3>
+                    <p className="text-gray-300 mb-6 leading-relaxed">
+                      온라인 학습 관리 시스템으로
+                      언제 어디서나 학습 가능
+                    </p>
+                    <a
+                      href="/subscription"
+                      className="inline-flex items-center bg-gradient-to-r from-pink-600 to-rose-600 text-white px-6 py-3 rounded-full font-semibold hover:from-pink-700 hover:to-rose-700 transition-all duration-300 shadow-lg hover:shadow-pink-500/25"
+                    >
+                      구독하기 <ArrowRight size={18} className="ml-2" />
+                    </a>
+                  </div>
+                </motion.div>
+
+                <motion.div variants={fadeInUp} className="group">
+                  <div className="bg-white/5 backdrop-blur-xl p-8 rounded-3xl border border-white/10 hover:border-blue-400/50 transition-all duration-300 hover:shadow-2xl hover:shadow-blue-500/20 text-center">
+                    <div className="w-16 h-16 bg-blue-600/20 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:bg-blue-600/30 transition-colors">
+                      <Calendar className="text-blue-400" size={32} />
+                    </div>
+                    <h3 className="text-2xl font-bold text-white mb-4">개별 상담</h3>
+                    <p className="text-gray-300 mb-6 leading-relaxed">
+                      맞춤형 교육 상담으로
+                      최적의 학습 경로 제안
+                    </p>
+                    <a
+                      href="/contact"
+                      className="inline-flex items-center bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-3 rounded-full font-semibold hover:from-blue-700 hover:to-indigo-700 transition-all duration-300 shadow-lg hover:shadow-blue-500/25"
+                    >
+                      상담 신청 <ArrowRight size={18} className="ml-2" />
+                    </a>
+                  </div>
+                </motion.div>
+              </motion.div>
+
+              {/* 추가 혜택 섹션 */}
+              <motion.div
+                initial="initial"
+                whileInView="animate"
+                viewport={{ once: true }}
+                variants={fadeInUp}
+                className="bg-white/5 backdrop-blur-xl rounded-3xl p-8 md:p-12 text-center border border-white/10"
+              >
+                <h3 className="text-2xl md:text-3xl font-bold text-white mb-6">
+                  지금 시작하면 받을 수 있는 특별 혜택
+                </h3>
+                <div className="grid md:grid-cols-3 gap-6 mb-8">
+                  <div className="flex items-center justify-center gap-3">
+                    <CheckCircle className="text-green-400" size={24} />
+                    <span className="text-gray-300 font-medium">전문가 1:1 멘토링</span>
+                  </div>
+                  <div className="flex items-center justify-center gap-3">
+                    <CheckCircle className="text-green-400" size={24} />
+                    <span className="text-gray-300 font-medium">수료증 발급</span>
+                  </div>
+                  <div className="flex items-center justify-center gap-3">
+                    <CheckCircle className="text-green-400" size={24} />
+                    <span className="text-gray-300 font-medium">네트워킹 기회 제공</span>
+                  </div>
+                </div>
+                <a
+                  href="/programs"
+                  className="inline-flex items-center bg-gradient-to-r from-purple-600 to-pink-600 text-white px-8 py-4 rounded-full font-semibold text-lg hover:from-purple-700 hover:to-pink-700 transition-all duration-300 shadow-lg hover:shadow-xl"
+                >
+                  무료 체험 신청하기 <ArrowRight size={20} className="ml-2" />
+                </a>
               </motion.div>
             </div>
           </div>

@@ -1,0 +1,20 @@
+{
+  "name": "몬스터 협동조합",
+  "short_name": "몬스터",
+  "description": "팀프러너를 양성하는 No.1 교육 기관",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#1f2937",
+  "lang": "ko-KR",
+  "dir": "ltr",
+  "icons": [
+    {
+      "src": "/globe.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+} 

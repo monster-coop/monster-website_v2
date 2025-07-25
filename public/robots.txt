@@ -1,0 +1,27 @@
+User-agent: *
+Allow: /
+
+# Allow all crawlers access to public pages
+Allow: /programs
+Allow: /programs/*
+Allow: /history
+Allow: /terms
+Allow: /privacy
+Allow: /refund
+
+# Disallow admin and auth pages
+Disallow: /admin
+Disallow: /admin/*
+Disallow: /auth
+Disallow: /auth/*
+Disallow: /dashboard
+Disallow: /dashboard/*
+Disallow: /api
+Disallow: /api/*
+
+# Disallow payment processing pages
+Disallow: /payments
+Disallow: /payments/*
+
+# Sitemap location
+Sitemap: https://monstercoop.co.kr/sitemap.xml
